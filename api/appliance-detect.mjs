@@ -5,7 +5,7 @@ const GEMINI_BASE_URL =
   process.env.GEMINI_BASE_URL ||
   'https://generativelanguage.googleapis.com/v1beta';
 const GEMINI_VISION_MODEL =
-  process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash';
+  process.env.GEMINI_VISION_MODEL || 'gemini-2.5-flash-lite';
 
 export default async function handler(req, res) {
   setCorsHeaders(res);

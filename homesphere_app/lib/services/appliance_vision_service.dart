@@ -30,8 +30,11 @@ class ApplianceVisionService {
   ApplianceVisionService({http.Client? client})
       : _client = client ?? http.Client();
 
+  static const String _defaultApiUrl =
+      'https://home-sphere-indol.vercel.app/api/appliance-detect';
   static const String _configuredApiUrl = String.fromEnvironment(
     'APPLIANCE_VISION_API_URL',
+    defaultValue: _defaultApiUrl,
   );
 
   final http.Client _client;

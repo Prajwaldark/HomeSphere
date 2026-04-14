@@ -18,7 +18,7 @@ export async function detectAppliance({
   mimeType,
   geminiApiKey,
   geminiBaseUrl = 'https://generativelanguage.googleapis.com/v1beta',
-  geminiVisionModel = 'gemini-2.5-flash',
+  geminiVisionModel = 'gemini-2.5-flash-lite',
   fetchImpl = fetch,
 }) {
   if (!geminiApiKey) {

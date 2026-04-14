@@ -13,7 +13,7 @@ This repo is set up for a Vercel serverless API:
 In Vercel, add these environment variables:
 
 - `GEMINI_API_KEY`
-- `GEMINI_VISION_MODEL` (optional, defaults to `gemini-2.5-flash`)
+- `GEMINI_VISION_MODEL` (optional, defaults to `gemini-2.5-flash-lite`)
 - `GEMINI_BASE_URL` (optional)
 
 After deployment, your public endpoint will look like:
