@@ -26,43 +26,41 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Greeting
           Text(
             'Welcome back,',
             style: TextStyle(
               fontSize: 15,
-              color: AppTheme.textSecondary.withValues(alpha: 0.7),
+              color: cs.onSurfaceVariant.withValues(alpha: 0.7),
               letterSpacing: 0.3,
             ),
           ),
           const SizedBox(height: 4),
           Text(
             _getUserName(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 36,
               fontWeight: FontWeight.w800,
-              color: AppTheme.textPrimary,
+              color: cs.onSurface,
               letterSpacing: -1.5,
             ),
           ),
           const SizedBox(height: 32),
 
-          // Stats
           const SectionHeader(title: 'Overview'),
           _buildStatsGrid(),
           const SizedBox(height: 36),
 
-          // Recent Subscriptions
           const SectionHeader(title: 'Recent Activity'),
           _buildRecentSubscriptions(),
           const SizedBox(height: 36),
 
-          // Alerts
           const SectionHeader(title: 'Alerts'),
           _buildAlerts(),
           const SizedBox(height: 24),
@@ -72,6 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildStatsGrid() {
+    final cs = Theme.of(context).colorScheme;
     return StreamBuilder<List<Subscription>>(
       stream: _firestoreService.streamSubscriptions(),
       builder: (context, subSnap) {
@@ -99,13 +98,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     StatCard(
                       label: 'Active Subs',
                       value: '$activeSubs',
-                      color: AppTheme.accentGold,
+                      color: cs.primary,
                       icon: Icons.receipt_long_rounded,
                     ),
                     StatCard(
                       label: 'Appliances',
                       value: '${appliances.length}',
-                      color: AppTheme.accentSilver,
+                      color: cs.secondary,
                       icon: Icons.devices_rounded,
                     ),
                     StatCard(
@@ -118,7 +117,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       label: 'Total',
                       value:
                           '${subs.length + appliances.length + vehicles.length}',
-                      color: AppTheme.accentChampagne,
+                      color: cs.tertiary,
                       icon: Icons.inventory_2_rounded,
                     ),
                   ],
@@ -132,12 +131,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRecentSubscriptions() {
+    final cs = Theme.of(context).colorScheme;
     return StreamBuilder<List<Subscription>>(
       stream: _firestoreService.streamSubscriptions(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: CircularProgressIndicator(color: AppTheme.accentGold),
+          return Center(
+            child: CircularProgressIndicator(color: cs.primary),
           );
         }
         final subs = snapshot.data ?? [];
@@ -156,12 +156,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: GlassCard(
                 child: Row(
                   children: [
-                    // Color dot
                     Container(
                       width: 8,
                       height: 8,
                       decoration: BoxDecoration(
-                        color: AppTheme.accentGold,
+                        color: cs.primary,
                         shape: BoxShape.circle,
                       ),
                     ),
@@ -172,19 +171,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Text(
                             sub.name,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
                               fontSize: 15,
-                              color: AppTheme.textPrimary,
+                              color: cs.onSurface,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Text(
                             sub.category,
                             style: TextStyle(
-                              color: AppTheme.textSecondary.withValues(
-                                alpha: 0.6,
-                              ),
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.6),
                               fontSize: 12,
                             ),
                           ),
@@ -193,10 +190,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     Text(
                       sub.price,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: AppTheme.accentGold,
+                        color: cs.primary,
                       ),
                     ),
                   ],
@@ -210,6 +207,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildAlerts() {
+    final cs = Theme.of(context).colorScheme;
     return StreamBuilder<List<Vehicle>>(
       stream: _firestoreService.streamVehicles(),
       builder: (context, snapshot) {
@@ -244,9 +242,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         children: [
                           Text(
                             'Insurance: ${v.insuranceExpiry}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w600,
-                              color: AppTheme.textPrimary,
+                              color: cs.onSurface,
                               fontSize: 14,
                             ),
                           ),
@@ -254,9 +252,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           Text(
                             '${v.name} — ${v.regNumber}',
                             style: TextStyle(
-                              color: AppTheme.textSecondary.withValues(
-                                alpha: 0.6,
-                              ),
+                              color: cs.onSurfaceVariant.withValues(alpha: 0.6),
                               fontSize: 12,
                             ),
                           ),
@@ -277,12 +273,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     required IconData icon,
     required String title,
     required String subtitle,
-    Color color = const Color(0xFF6B6B6B),
+    Color? color,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    final c = color ?? cs.onSurfaceVariant;
     return GlassCard(
       child: Row(
         children: [
-          Icon(icon, color: color.withValues(alpha: 0.5), size: 24),
+          Icon(icon, color: c.withValues(alpha: 0.5), size: 24),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
@@ -292,7 +290,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   title,
                   style: TextStyle(
                     fontWeight: FontWeight.w600,
-                    color: color,
+                    color: c,
                     fontSize: 14,
                   ),
                 ),
@@ -300,7 +298,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Text(
                   subtitle,
                   style: TextStyle(
-                    color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                    color: cs.onSurfaceVariant.withValues(alpha: 0.5),
                     fontSize: 12,
                   ),
                 ),

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'theme/app_theme.dart';
+import 'theme/theme_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/subscriptions_screen.dart';
@@ -9,22 +10,55 @@ import 'screens/appliances_screen.dart';
 import 'screens/vehicles_screen.dart';
 import 'screens/services_screen.dart';
 import 'screens/settings_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  await NotificationService().init();
   runApp(const HomeSphereApp());
 }
 
-class HomeSphereApp extends StatelessWidget {
+class HomeSphereApp extends StatefulWidget {
   const HomeSphereApp({super.key});
+
+  static ThemeProvider of(BuildContext context) {
+    final state = context.findAncestorStateOfType<_HomeSphereAppState>();
+    return state!.themeProvider;
+  }
+
+  @override
+  State<HomeSphereApp> createState() => _HomeSphereAppState();
+}
+
+class _HomeSphereAppState extends State<HomeSphereApp> {
+  final ThemeProvider themeProvider = ThemeProvider();
+
+  @override
+  void initState() {
+    super.initState();
+    themeProvider.addListener(_onThemeChanged);
+  }
+
+  @override
+  void dispose() {
+    themeProvider.removeListener(_onThemeChanged);
+    themeProvider.dispose();
+    super.dispose();
+  }
+
+  void _onThemeChanged() {
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'HomeSphere',
       debugShowCheckedModeBanner: false,
-      theme: AppTheme.darkTheme,
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: themeProvider.themeMode,
       home: const AuthGate(),
     );
   }
@@ -35,13 +69,14 @@ class AuthGate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
+          return Scaffold(
             body: Center(
-              child: CircularProgressIndicator(color: AppTheme.accentGold),
+              child: CircularProgressIndicator(color: cs.primary),
             ),
           );
         }
@@ -103,37 +138,30 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        title: Text(
-          _titles[_currentIndex],
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.w800,
-            letterSpacing: -1.0,
-          ),
-        ),
+        title: Text(_titles[_currentIndex]),
         actions: [
           // Notification icon
           Container(
             margin: const EdgeInsets.only(right: 8),
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: AppTheme.cardBg,
+              color: cs.surfaceContainerHigh,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.glassBorder),
+              border: Border.all(
+                color: cs.outlineVariant.withValues(alpha: 0.3),
+              ),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.notifications_none_rounded,
-              color: AppTheme.textSecondary,
+              color: cs.onSurfaceVariant,
               size: 20,
             ),
           ),
-          // Avatar with gold ring
+          // Avatar
           Padding(
             padding: const EdgeInsets.only(right: 20),
             child: GestureDetector(
@@ -145,15 +173,15 @@ class _MainNavigationState extends State<MainNavigation> {
                 padding: const EdgeInsets.all(2),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: AppTheme.premiumGradient,
+                  gradient: AppTheme.primaryGradient(context),
                 ),
                 child: CircleAvatar(
                   radius: 16,
-                  backgroundColor: AppTheme.cardBg,
+                  backgroundColor: cs.surfaceContainerHigh,
                   child: Text(
                     _getUserInitials(),
-                    style: const TextStyle(
-                      color: AppTheme.accentGold,
+                    style: TextStyle(
+                      color: cs.primary,
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
                     ),
@@ -168,16 +196,20 @@ class _MainNavigationState extends State<MainNavigation> {
         duration: const Duration(milliseconds: 300),
         child: _screens[_currentIndex],
       ),
-      bottomNavigationBar: _buildCREDNavBar(),
+      bottomNavigationBar: _buildNavBar(cs),
     );
   }
 
-  Widget _buildCREDNavBar() {
+  Widget _buildNavBar(ColorScheme cs) {
     return Container(
       padding: const EdgeInsets.only(top: 12, bottom: 24, left: 16, right: 16),
-      decoration: const BoxDecoration(
-        color: AppTheme.bgColor,
-        border: Border(top: BorderSide(color: AppTheme.glassBorder)),
+      decoration: BoxDecoration(
+        color: cs.surface,
+        border: Border(
+          top: BorderSide(
+            color: cs.outlineVariant.withValues(alpha: 0.2),
+          ),
+        ),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -195,13 +227,13 @@ class _MainNavigationState extends State<MainNavigation> {
               ),
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.accentGold.withValues(alpha: 0.1)
+                    ? cs.primary.withValues(alpha: 0.1)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Icon(
                 _icons[index],
-                color: isSelected ? AppTheme.accentGold : AppTheme.textMuted,
+                color: isSelected ? cs.primary : cs.outline,
                 size: isSelected ? 24 : 22,
               ),
             ),

@@ -21,6 +21,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     required DateTime? date,
     required void Function(DateTime) onPicked,
   }) {
+    final cs = Theme.of(ctx).colorScheme;
     return GestureDetector(
       onTap: () async {
         final picked = await showDatePicker(
@@ -28,17 +29,6 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
           initialDate: date ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2040),
-          builder: (context, child) {
-            return Theme(
-              data: ThemeData.dark().copyWith(
-                colorScheme: const ColorScheme.dark(
-                  primary: AppTheme.accentGold,
-                  surface: AppTheme.panelBg,
-                ),
-              ),
-              child: child!,
-            );
-          },
         );
         if (picked != null) onPicked(picked);
       },
@@ -46,14 +36,16 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: AppTheme.surfaceLight.withValues(alpha: 0.5),
-          border: Border.all(color: AppTheme.glassBorder),
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
             Icon(
               Icons.calendar_today_rounded,
-              color: AppTheme.textSecondary.withValues(alpha: 0.5),
+              color: cs.onSurfaceVariant.withValues(alpha: 0.5),
               size: 18,
             ),
             const SizedBox(width: 12),
@@ -61,8 +53,8 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
               date != null ? DateFormat('MMM dd, yyyy').format(date) : label,
               style: TextStyle(
                 color: date != null
-                    ? AppTheme.textPrimary
-                    : AppTheme.textSecondary.withValues(alpha: 0.5),
+                    ? cs.onSurface
+                    : cs.onSurfaceVariant.withValues(alpha: 0.5),
                 fontSize: 15,
               ),
             ),
@@ -137,7 +129,6 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                       SnackBar(
                         content: Text('Error: $e'),
                         backgroundColor: AppTheme.danger,
-                        behavior: SnackBarBehavior.floating,
                       ),
                     );
                   }
@@ -152,20 +143,20 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddDialog,
-        backgroundColor: AppTheme.accentGold,
-        elevation: 0,
-        child: const Icon(Icons.add_rounded, color: Colors.black),
+        child: const Icon(Icons.add_rounded),
       ),
       body: StreamBuilder<List<Vehicle>>(
         stream: _firestoreService.streamVehicles(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppTheme.accentGold),
+            return Center(
+              child: CircularProgressIndicator(color: cs.primary),
             );
           }
           final vehicles = snapshot.data ?? [];
@@ -180,21 +171,23 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    color: AppTheme.cardBg,
+                    color: cs.surfaceContainerHigh,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: AppTheme.glassBorder),
+                    border: Border.all(
+                      color: cs.outlineVariant.withValues(alpha: 0.3),
+                    ),
                   ),
                   child: Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: AppTheme.accentGold.withValues(alpha: 0.08),
+                          color: cs.primary.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(16),
                         ),
                         child: Icon(
                           Icons.directions_car_rounded,
-                          color: AppTheme.accentGold.withValues(alpha: 0.7),
+                          color: cs.primary,
                           size: 24,
                         ),
                       ),
@@ -204,10 +197,10 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                         children: [
                           Text(
                             '${vehicles.length}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 28,
                               fontWeight: FontWeight.w800,
-                              color: AppTheme.textPrimary,
+                              color: cs.onSurface,
                               letterSpacing: -1,
                             ),
                           ),
@@ -216,9 +209,8 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: AppTheme.textSecondary.withValues(
-                                alpha: 0.5,
-                              ),
+                              color: cs.onSurfaceVariant
+                                  .withValues(alpha: 0.5),
                               letterSpacing: 1.5,
                             ),
                           ),
@@ -238,13 +230,13 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                           Icon(
                             Icons.directions_car_rounded,
                             size: 56,
-                            color: AppTheme.textMuted.withValues(alpha: 0.3),
+                            color: cs.outline.withValues(alpha: 0.3),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'No vehicles yet',
                             style: TextStyle(
-                              color: AppTheme.textSecondary,
+                              color: cs.onSurfaceVariant,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                             ),
@@ -283,14 +275,15 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppTheme.cardBg,
+                          color: cs.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppTheme.glassBorder),
+                          border: Border.all(
+                            color: cs.outlineVariant.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Header
                             Row(
                               children: [
                                 Expanded(
@@ -300,19 +293,18 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                                     children: [
                                       Text(
                                         vehicle.name,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.w700,
                                           fontSize: 17,
-                                          color: AppTheme.textPrimary,
+                                          color: cs.onSurface,
                                         ),
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
                                         vehicle.regNumber,
                                         style: TextStyle(
-                                          color: AppTheme.accentGold.withValues(
-                                            alpha: 0.7,
-                                          ),
+                                          color: cs.primary
+                                              .withValues(alpha: 0.7),
                                           fontSize: 13,
                                           fontWeight: FontWeight.w600,
                                           letterSpacing: 1.0,
@@ -324,9 +316,12 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            Container(height: 1, color: AppTheme.glassBorder),
+                            Container(
+                              height: 1,
+                              color: cs.outlineVariant
+                                  .withValues(alpha: 0.2),
+                            ),
                             const SizedBox(height: 14),
-                            // Info rows
                             Row(
                               children: [
                                 _infoItem('Insurance', vehicle.insuranceExpiry),
@@ -356,6 +351,7 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
   }
 
   Widget _infoItem(String label, String value) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -364,16 +360,16 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
           style: TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w600,
-            color: AppTheme.textSecondary.withValues(alpha: 0.4),
+            color: cs.onSurfaceVariant.withValues(alpha: 0.4),
             letterSpacing: 1.2,
           ),
         ),
         const SizedBox(height: 2),
         Text(
           value.isNotEmpty ? value : '—',
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 13,
-            color: AppTheme.textPrimary,
+            color: cs.onSurface,
             fontWeight: FontWeight.w500,
           ),
         ),

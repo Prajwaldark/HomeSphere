@@ -36,9 +36,32 @@ class Subscription {
 }
 
 class Appliance {
+  static const List<String> categoryOptions = [
+    'Fan',
+    'Refrigerator',
+    'TV',
+    'Washing Machine',
+    'Air Conditioner',
+    'Microwave',
+    'Water Purifier',
+    'Geyser',
+    'Vacuum Cleaner',
+    'Dishwasher',
+    'Air Purifier',
+    'Other',
+  ];
+
+  static const List<String> statusOptions = [
+    'Healthy',
+    'Needs Repair',
+    'Under Warranty',
+  ];
+
   final String? id;
   final String name;
   final String brand;
+  final String category;
+  final String model;
   final String status;
   final String warrantyExpiry;
   final String purchaseDate;
@@ -47,6 +70,8 @@ class Appliance {
     this.id,
     required this.name,
     required this.brand,
+    required this.category,
+    required this.model,
     required this.status,
     required this.warrantyExpiry,
     required this.purchaseDate,
@@ -55,6 +80,8 @@ class Appliance {
   Map<String, dynamic> toMap() => {
     'name': name,
     'brand': brand,
+    'category': category,
+    'model': model,
     'status': status,
     'warrantyExpiry': warrantyExpiry,
     'purchaseDate': purchaseDate,
@@ -65,6 +92,8 @@ class Appliance {
       id: id,
       name: map['name'] ?? '',
       brand: map['brand'] ?? '',
+      category: map['category'] ?? '',
+      model: map['model'] ?? '',
       status: map['status'] ?? '',
       warrantyExpiry: map['warrantyExpiry'] ?? '',
       purchaseDate: map['purchaseDate'] ?? '',

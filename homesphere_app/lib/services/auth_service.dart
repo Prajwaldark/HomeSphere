@@ -1,15 +1,47 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+class AuthFailure implements Exception {
+  const AuthFailure(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class AuthService {
+  AuthService({GoogleSignIn? googleSignIn})
+    : _googleSignIn = googleSignIn ?? GoogleSignIn();
+
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  final GoogleSignIn _googleSignIn;
+
+  static const String _gmailScope =
+      'https://www.googleapis.com/auth/gmail.readonly';
 
   /// The currently signed-in user, or null.
   User? get currentUser => _auth.currentUser;
 
   /// Stream that emits whenever the auth state changes.
   Stream<User?> get authStateChanges => _auth.authStateChanges();
+
+  bool get supportsGoogleSignIn {
+    if (kIsWeb) return true;
+
+    switch (defaultTargetPlatform) {
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+        return true;
+      case TargetPlatform.fuchsia:
+      case TargetPlatform.linux:
+      case TargetPlatform.windows:
+        return false;
+    }
+  }
 
   /// Sign in with email and password.
   Future<UserCredential> signIn({
@@ -36,29 +68,107 @@ class AuthService {
   /// Sign in with Google.
   /// Returns the [UserCredential] on success, or null if cancelled.
   Future<UserCredential?> signInWithGoogle() async {
-    // Trigger the Google authentication flow
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-
-    // User cancelled the sign-in
-    if (googleUser == null) return null;
-
-    // Obtain the auth details from the request
-    final GoogleSignInAuthentication googleAuth =
-        await googleUser.authentication;
-
-    // Create a new credential
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
+    _ensureGoogleSignInSupported(
+      'Google sign-in is only available on Android, iOS, macOS, and web builds.',
     );
 
-    // Sign in to Firebase with the credential
-    return await _auth.signInWithCredential(credential);
+    try {
+      await _googleSignIn.signOut();
+
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) return null;
+
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      return await _auth.signInWithCredential(credential);
+    } on PlatformException catch (e) {
+      throw AuthFailure(_mapGooglePlatformError(e));
+    } on FirebaseAuthException catch (e) {
+      throw AuthFailure(_mapFirebaseAuthError(e));
+    }
+  }
+
+  /// Get a Google access token WITH Gmail read scope.
+  /// Requests the scope on-demand so regular sign-in is unaffected.
+  /// Returns null if user cancels or is not signed in with Google.
+  Future<String?> getGmailAccessToken() async {
+    _ensureGoogleSignInSupported(
+      'Gmail import is only available on Android, iOS, macOS, and web builds.',
+    );
+
+    try {
+      GoogleSignInAccount? googleUser = _googleSignIn.currentUser;
+      googleUser ??= await _googleSignIn.signInSilently();
+
+      if (googleUser == null) {
+        googleUser = await _googleSignIn.signIn();
+        if (googleUser == null) return null;
+      }
+
+      final hasGmailAccess = await _googleSignIn.requestScopes([_gmailScope]);
+      if (!hasGmailAccess) {
+        return null;
+      }
+
+      final auth = await googleUser.authentication;
+      return auth.accessToken;
+    } on PlatformException catch (e) {
+      throw AuthFailure(_mapGooglePlatformError(e));
+    }
   }
 
   /// Sign out the current user (also signs out of Google).
   Future<void> signOut() async {
-    await _googleSignIn.signOut();
+    if (supportsGoogleSignIn) {
+      await _googleSignIn.signOut();
+    }
     await _auth.signOut();
+  }
+
+  void _ensureGoogleSignInSupported(String message) {
+    if (!supportsGoogleSignIn) {
+      throw AuthFailure(message);
+    }
+  }
+
+  String _mapGooglePlatformError(PlatformException error) {
+    switch (error.code) {
+      case GoogleSignIn.kSignInCanceledError:
+        return 'Google sign-in was canceled.';
+      case GoogleSignIn.kNetworkError:
+        return 'Google sign-in failed because the device is offline or Google services are unreachable.';
+      case GoogleSignIn.kSignInFailedError:
+        return 'Google sign-in failed. On Android, this usually means the Firebase OAuth client or SHA fingerprint is misconfigured.';
+      case GoogleSignInAccount.kUserRecoverableAuthError:
+      case GoogleSignInAccount.kFailedToRecoverAuthError:
+        return 'Google account access needs to be re-approved on the device. Try again and complete the consent flow.';
+      default:
+        final details = error.message?.trim();
+        if (details != null && details.isNotEmpty) {
+          return details;
+        }
+        return 'Google sign-in failed with error code "${error.code}".';
+    }
+  }
+
+  String _mapFirebaseAuthError(FirebaseAuthException error) {
+    switch (error.code) {
+      case 'account-exists-with-different-credential':
+        return 'An account already exists with this email using a different sign-in method.';
+      case 'invalid-credential':
+        return 'Google returned an invalid credential. Check the Firebase Google provider and OAuth client configuration.';
+      case 'operation-not-allowed':
+        return 'Google sign-in is not enabled in Firebase Authentication.';
+      case 'user-disabled':
+        return 'This Firebase user has been disabled.';
+      default:
+        return error.message ?? 'Firebase sign-in failed.';
+    }
   }
 }

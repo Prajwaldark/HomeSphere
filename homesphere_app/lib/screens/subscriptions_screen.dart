@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../widgets/stat_card.dart';
 import '../services/firestore_service.dart';
+import 'gmail_import_screen.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -31,7 +32,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           const SizedBox(height: 14),
           credTextField(priceCtrl, 'Price', 'e.g. ₹499/mo'),
           const SizedBox(height: 14),
-          // Date picker
           _buildDateField(
             ctx: ctx,
             label: 'Next Billing',
@@ -39,39 +39,9 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             onPicked: (d) => setModalState(() => billingDate = d),
           ),
           const SizedBox(height: 14),
-          // Category dropdown
-          DropdownButtonFormField<String>(
-            value: selectedCategory,
-            dropdownColor: AppTheme.panelBg,
-            style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-            decoration: InputDecoration(
-              labelText: 'Category',
-              labelStyle: TextStyle(
-                color: AppTheme.textSecondary.withValues(alpha: 0.7),
-                fontSize: 13,
-              ),
-              filled: true,
-              fillColor: AppTheme.surfaceLight.withValues(alpha: 0.5),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: const BorderSide(color: AppTheme.glassBorder),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: AppTheme.accentGold.withValues(alpha: 0.4),
-                ),
-              ),
-            ),
-            items: [
-              'Entertainment',
-              'Productivity',
-              'Cloud',
-              'Music',
-              'Other',
-            ].map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-            onChanged: (v) => setModalState(() => selectedCategory = v!),
-          ),
+          _buildCategoryDropdown(ctx, selectedCategory, (v) {
+            setModalState(() => selectedCategory = v!);
+          }),
           const SizedBox(height: 24),
           credButton(
             label: 'Add Subscription',
@@ -96,7 +66,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     SnackBar(
                       content: Text('Error: $e'),
                       backgroundColor: AppTheme.danger,
-                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
@@ -108,12 +77,33 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     );
   }
 
+  Widget _buildCategoryDropdown(
+    BuildContext ctx,
+    String value,
+    ValueChanged<String?> onChanged,
+  ) {
+    final cs = Theme.of(ctx).colorScheme;
+    return DropdownButtonFormField<String>(
+      initialValue: value,
+      dropdownColor: cs.surfaceContainerHigh,
+      style: TextStyle(color: cs.onSurface, fontSize: 15),
+      decoration: InputDecoration(
+        labelText: 'Category',
+      ),
+      items: ['Entertainment', 'Productivity', 'Cloud', 'Music', 'Other']
+          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+          .toList(),
+      onChanged: onChanged,
+    );
+  }
+
   Widget _buildDateField({
     required BuildContext ctx,
     required String label,
     required DateTime? date,
     required void Function(DateTime) onPicked,
   }) {
+    final cs = Theme.of(ctx).colorScheme;
     return GestureDetector(
       onTap: () async {
         final picked = await showDatePicker(
@@ -121,17 +111,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           initialDate: date ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2040),
-          builder: (context, child) {
-            return Theme(
-              data: ThemeData.dark().copyWith(
-                colorScheme: const ColorScheme.dark(
-                  primary: AppTheme.accentGold,
-                  surface: AppTheme.panelBg,
-                ),
-              ),
-              child: child!,
-            );
-          },
         );
         if (picked != null) onPicked(picked);
       },
@@ -139,14 +118,16 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: AppTheme.surfaceLight.withValues(alpha: 0.5),
-          border: Border.all(color: AppTheme.glassBorder),
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
             Icon(
               Icons.calendar_today_rounded,
-              color: AppTheme.textSecondary.withValues(alpha: 0.5),
+              color: cs.onSurfaceVariant.withValues(alpha: 0.5),
               size: 18,
             ),
             const SizedBox(width: 12),
@@ -154,8 +135,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
               date != null ? DateFormat('MMM dd, yyyy').format(date) : label,
               style: TextStyle(
                 color: date != null
-                    ? AppTheme.textPrimary
-                    : AppTheme.textSecondary.withValues(alpha: 0.5),
+                    ? cs.onSurface
+                    : cs.onSurfaceVariant.withValues(alpha: 0.5),
                 fontSize: 15,
               ),
             ),
@@ -165,37 +146,61 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
     );
   }
 
-  Color _getCategoryColor(String category) {
+  Color _getCategoryColor(String category, ColorScheme cs) {
     switch (category) {
       case 'Entertainment':
-        return AppTheme.accentGold;
+        return cs.primary;
       case 'Productivity':
-        return AppTheme.accentSilver;
+        return cs.secondary;
       case 'Cloud':
-        return AppTheme.accentChampagne;
+        return cs.tertiary;
       case 'Music':
         return AppTheme.success;
       default:
-        return AppTheme.textSecondary;
+        return cs.onSurfaceVariant;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        backgroundColor: AppTheme.accentGold,
-        elevation: 0,
-        child: const Icon(Icons.add_rounded, color: Colors.black),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          // Gmail import mini FAB
+          FloatingActionButton.small(
+            heroTag: 'gmail_import',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const GmailImportScreen(),
+                ),
+              );
+            },
+            backgroundColor: cs.secondaryContainer,
+            foregroundColor: cs.onSecondaryContainer,
+            child: const Icon(Icons.email_rounded, size: 20),
+          ),
+          const SizedBox(height: 12),
+          // Manual add FAB
+          FloatingActionButton(
+            heroTag: 'add_sub',
+            onPressed: _showAddDialog,
+            child: const Icon(Icons.add_rounded),
+          ),
+        ],
       ),
       body: StreamBuilder<List<Subscription>>(
         stream: _firestoreService.streamSubscriptions(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppTheme.accentGold),
+            return Center(
+              child: CircularProgressIndicator(color: cs.primary),
             );
           }
           final subs = snapshot.data ?? [];
@@ -205,12 +210,12 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Hero summary
+                // Hero summary card
                 Container(
                   width: double.infinity,
                   padding: const EdgeInsets.all(24),
                   decoration: BoxDecoration(
-                    gradient: AppTheme.premiumGradient,
+                    gradient: AppTheme.primaryGradient(context),
                     borderRadius: BorderRadius.circular(24),
                   ),
                   child: Column(
@@ -218,23 +223,57 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     children: [
                       Text(
                         '${subs.where((s) => s.isActive).length}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 48,
                           fontWeight: FontWeight.w800,
-                          color: Colors.black,
+                          color: cs.onPrimary,
                           letterSpacing: -2,
                         ),
                       ),
-                      const Text(
+                      Text(
                         'ACTIVE SUBSCRIPTIONS',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.w700,
-                          color: Colors.black54,
+                          color: cs.onPrimary.withValues(alpha: 0.7),
                           letterSpacing: 2.0,
                         ),
                       ),
                     ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Import from Gmail button
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const GmailImportScreen(),
+                        ),
+                      );
+                    },
+                    icon: Icon(Icons.email_rounded, size: 18, color: cs.primary),
+                    label: Text(
+                      'Import from Gmail',
+                      style: TextStyle(
+                        color: cs.primary,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      side: BorderSide(
+                        color: cs.primary.withValues(alpha: 0.3),
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -248,13 +287,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                           Icon(
                             Icons.receipt_long_rounded,
                             size: 56,
-                            color: AppTheme.textMuted.withValues(alpha: 0.3),
+                            color: cs.outline.withValues(alpha: 0.3),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'No subscriptions yet',
                             style: TextStyle(
-                              color: AppTheme.textSecondary,
+                              color: cs.onSurfaceVariant,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
                             ),
@@ -263,7 +302,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                           Text(
                             'Tap + to add one',
                             style: TextStyle(
-                              color: AppTheme.textMuted.withValues(alpha: 0.6),
+                              color: cs.outline.withValues(alpha: 0.6),
                               fontSize: 13,
                             ),
                           ),
@@ -275,7 +314,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                 const SectionHeader(title: 'All Subscriptions'),
 
                 ...subs.map((sub) {
-                  final color = _getCategoryColor(sub.category);
+                  final color = _getCategoryColor(sub.category, cs);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Dismissible(
@@ -302,7 +341,6 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         padding: const EdgeInsets.all(20),
                         child: Row(
                           children: [
-                            // Category dot
                             Container(
                               width: 10,
                               height: 10,
@@ -318,19 +356,18 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                                 children: [
                                   Text(
                                     sub.name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.w600,
                                       fontSize: 16,
-                                      color: AppTheme.textPrimary,
+                                      color: cs.onSurface,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     '${sub.category} · ${sub.nextBilling}',
                                     style: TextStyle(
-                                      color: AppTheme.textSecondary.withValues(
-                                        alpha: 0.6,
-                                      ),
+                                      color: cs.onSurfaceVariant
+                                          .withValues(alpha: 0.6),
                                       fontSize: 12,
                                     ),
                                   ),
@@ -342,10 +379,10 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                               children: [
                                 Text(
                                   sub.price,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontWeight: FontWeight.w700,
                                     fontSize: 16,
-                                    color: AppTheme.textPrimary,
+                                    color: cs.onSurface,
                                   ),
                                 ),
                                 const SizedBox(height: 4),
@@ -353,7 +390,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                                   text: sub.isActive ? 'Active' : 'Paused',
                                   color: sub.isActive
                                       ? AppTheme.success
-                                      : AppTheme.textSecondary,
+                                      : cs.onSurfaceVariant,
                                 ),
                               ],
                             ),

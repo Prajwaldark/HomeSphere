@@ -1,9 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
-import '../theme/app_theme.dart';
+
 import '../models/models.dart';
-import '../widgets/stat_card.dart';
+import '../services/appliance_vision_service.dart';
 import '../services/firestore_service.dart';
+import '../theme/app_theme.dart';
+import '../widgets/stat_card.dart';
 
 class AppliancesScreen extends StatefulWidget {
   const AppliancesScreen({super.key});
@@ -14,14 +19,16 @@ class AppliancesScreen extends StatefulWidget {
 
 class _AppliancesScreenState extends State<AppliancesScreen> {
   final _firestoreService = FirestoreService();
+  final _visionService = ApplianceVisionService();
+  final _imagePicker = ImagePicker();
 
   Widget _buildDateField({
     required BuildContext ctx,
     required String label,
     required DateTime? date,
     required void Function(DateTime) onPicked,
-    required StateSetter setModalState,
   }) {
+    final cs = Theme.of(ctx).colorScheme;
     return GestureDetector(
       onTap: () async {
         final picked = await showDatePicker(
@@ -29,17 +36,6 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
           initialDate: date ?? DateTime.now(),
           firstDate: DateTime(2000),
           lastDate: DateTime(2040),
-          builder: (context, child) {
-            return Theme(
-              data: ThemeData.dark().copyWith(
-                colorScheme: const ColorScheme.dark(
-                  primary: AppTheme.accentGold,
-                  surface: AppTheme.panelBg,
-                ),
-              ),
-              child: child!,
-            );
-          },
         );
         if (picked != null) onPicked(picked);
       },
@@ -47,14 +43,16 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          color: AppTheme.surfaceLight.withValues(alpha: 0.5),
-          border: Border.all(color: AppTheme.glassBorder),
+          color: cs.surfaceContainerHighest.withValues(alpha: 0.5),
+          border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
             Icon(
               Icons.calendar_today_rounded,
-              color: AppTheme.textSecondary.withValues(alpha: 0.5),
+              color: cs.onSurfaceVariant.withValues(alpha: 0.5),
               size: 18,
             ),
             const SizedBox(width: 12),
@@ -62,8 +60,8 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
               date != null ? DateFormat('MMM dd, yyyy').format(date) : label,
               style: TextStyle(
                 color: date != null
-                    ? AppTheme.textPrimary
-                    : AppTheme.textSecondary.withValues(alpha: 0.5),
+                    ? cs.onSurface
+                    : cs.onSurfaceVariant.withValues(alpha: 0.5),
                 fontSize: 15,
               ),
             ),
@@ -73,107 +71,227 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
     );
   }
 
-  void _showAddDialog() {
-    final nameCtrl = TextEditingController();
-    final brandCtrl = TextEditingController();
-    DateTime? purchaseDate;
-    DateTime? warrantyDate;
-    String status = 'Healthy';
+  Future<void> _showApplianceForm({
+    required String title,
+    required String submitLabel,
+    _ApplianceFormSeed? seed,
+    XFile? capturedImage,
+    String? helperMessage,
+  }) async {
+    final initial = seed ?? const _ApplianceFormSeed();
+    final capturedImageBytes = capturedImage?.readAsBytes();
+    final nameCtrl = TextEditingController(text: initial.name);
+    final brandCtrl = TextEditingController(text: initial.brand);
+    final modelCtrl = TextEditingController(text: initial.model);
+    DateTime? purchaseDate = _parseUiDate(initial.purchaseDate);
+    DateTime? warrantyDate = _parseUiDate(initial.warrantyExpiry);
+    String category = Appliance.categoryOptions.contains(initial.category)
+        ? initial.category
+        : 'Other';
+    String status = Appliance.statusOptions.contains(initial.status)
+        ? initial.status
+        : Appliance.statusOptions.first;
 
-    CREDBottomSheet.show(
+    await CREDBottomSheet.show(
       context: context,
-      title: 'Add Appliance',
-      builder: (ctx, setModalState) => SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            credTextField(nameCtrl, 'Appliance Name', 'e.g. Samsung Fridge'),
-            const SizedBox(height: 14),
-            credTextField(brandCtrl, 'Brand', 'e.g. Samsung'),
-            const SizedBox(height: 14),
-            _buildDateField(
-              ctx: ctx,
-              label: 'Purchase Date',
-              date: purchaseDate,
-              onPicked: (d) => setModalState(() => purchaseDate = d),
-              setModalState: setModalState,
-            ),
-            const SizedBox(height: 14),
-            _buildDateField(
-              ctx: ctx,
-              label: 'Warranty Expiry',
-              date: warrantyDate,
-              onPicked: (d) => setModalState(() => warrantyDate = d),
-              setModalState: setModalState,
-            ),
-            const SizedBox(height: 14),
-            DropdownButtonFormField<String>(
-              value: status,
-              dropdownColor: AppTheme.panelBg,
-              style: const TextStyle(color: AppTheme.textPrimary, fontSize: 15),
-              decoration: InputDecoration(
-                labelText: 'Status',
-                labelStyle: TextStyle(
-                  color: AppTheme.textSecondary.withValues(alpha: 0.7),
-                  fontSize: 13,
-                ),
-                filled: true,
-                fillColor: AppTheme.surfaceLight.withValues(alpha: 0.5),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: AppTheme.glassBorder),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: BorderSide(
-                    color: AppTheme.accentGold.withValues(alpha: 0.4),
+      title: title,
+      builder: (ctx, setModalState) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (capturedImageBytes != null) ...[
+                _CapturedAppliancePreview(imageBytes: capturedImageBytes),
+                const SizedBox(height: 14),
+              ],
+              if (helperMessage != null && helperMessage.trim().isNotEmpty) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: cs.primary.withValues(alpha: 0.18),
+                    ),
+                  ),
+                  child: Text(
+                    helperMessage,
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 13,
+                      height: 1.35,
+                    ),
                   ),
                 ),
+                const SizedBox(height: 14),
+              ],
+              credTextField(nameCtrl, 'Appliance Name', 'e.g. Samsung Fridge'),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                initialValue: category,
+                dropdownColor: cs.surfaceContainerHigh,
+                style: TextStyle(color: cs.onSurface, fontSize: 15),
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: Appliance.categoryOptions
+                    .map((option) => DropdownMenuItem(
+                          value: option,
+                          child: Text(option),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setModalState(() => category = value);
+                },
               ),
-              items: [
-                'Healthy',
-                'Needs Repair',
-                'Under Warranty',
-              ].map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
-              onChanged: (v) => setModalState(() => status = v!),
-            ),
-            const SizedBox(height: 24),
-            credButton(
-              label: 'Add Appliance',
-              onPressed: () async {
-                if (nameCtrl.text.isEmpty) return;
-                try {
-                  await _firestoreService.addAppliance(
-                    Appliance(
-                      name: nameCtrl.text.trim(),
-                      brand: brandCtrl.text.trim(),
-                      purchaseDate: purchaseDate != null
-                          ? DateFormat('MMM dd, yyyy').format(purchaseDate!)
-                          : '',
-                      warrantyExpiry: warrantyDate != null
-                          ? DateFormat('MMM dd, yyyy').format(warrantyDate!)
-                          : '',
-                      status: status,
-                    ),
-                  );
-                  if (ctx.mounted) Navigator.pop(ctx);
-                } catch (e) {
-                  if (ctx.mounted) {
+              const SizedBox(height: 14),
+              credTextField(brandCtrl, 'Brand', 'e.g. Samsung'),
+              const SizedBox(height: 14),
+              credTextField(modelCtrl, 'Model', 'e.g. RT28A3453S8'),
+              const SizedBox(height: 14),
+              _buildDateField(
+                ctx: ctx,
+                label: 'Purchase Date',
+                date: purchaseDate,
+                onPicked: (date) =>
+                    setModalState(() => purchaseDate = date),
+              ),
+              const SizedBox(height: 14),
+              _buildDateField(
+                ctx: ctx,
+                label: 'Warranty Expiry',
+                date: warrantyDate,
+                onPicked: (date) =>
+                    setModalState(() => warrantyDate = date),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                initialValue: status,
+                dropdownColor: cs.surfaceContainerHigh,
+                style: TextStyle(color: cs.onSurface, fontSize: 15),
+                decoration: const InputDecoration(labelText: 'Status'),
+                items: Appliance.statusOptions
+                    .map((option) => DropdownMenuItem(
+                          value: option,
+                          child: Text(option),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setModalState(() => status = value);
+                },
+              ),
+              const SizedBox(height: 24),
+              credButton(
+                label: submitLabel,
+                onPressed: () async {
+                  if (nameCtrl.text.trim().isEmpty) return;
+
+                  try {
+                    await _firestoreService.addAppliance(
+                      Appliance(
+                        name: nameCtrl.text.trim(),
+                        brand: brandCtrl.text.trim(),
+                        category: category,
+                        model: modelCtrl.text.trim(),
+                        purchaseDate: _formatUiDate(purchaseDate),
+                        warrantyExpiry: _formatUiDate(warrantyDate),
+                        status: status,
+                      ),
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  } catch (e) {
+                    if (!ctx.mounted) return;
                     ScaffoldMessenger.of(ctx).showSnackBar(
                       SnackBar(
                         content: Text('Error: $e'),
                         backgroundColor: AppTheme.danger,
-                        behavior: SnackBarBehavior.floating,
                       ),
                     );
                   }
-                }
-              },
-            ),
-          ],
-        ),
-      ),
+                },
+              ),
+            ],
+          ),
+        );
+      },
     );
+  }
+
+  Future<void> _showAddDialog() async {
+    await _showApplianceForm(
+      title: 'Add Appliance',
+      submitLabel: 'Add Appliance',
+    );
+  }
+
+  Future<void> _scanApplianceFromCamera() async {
+    final image = await _imagePicker.pickImage(
+      source: ImageSource.camera,
+      imageQuality: 85,
+      maxWidth: 1600,
+    );
+
+    if (image == null || !mounted) return;
+
+    showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          backgroundColor: cs.surface,
+          content: Row(
+            children: [
+              CircularProgressIndicator(color: cs.primary),
+              const SizedBox(width: 16),
+              const Expanded(
+                child: Text('Analyzing appliance photo...'),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    DetectedApplianceDetails detected;
+    try {
+      detected = await _visionService.analyzeImage(image);
+    } catch (e) {
+      detected = DetectedApplianceDetails.empty(
+        message:
+            'The photo could not be analyzed automatically. Review the same appliance form and fill in the missing details manually.\n\n$e',
+      );
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
+    }
+
+    if (!mounted) return;
+
+    await _showApplianceForm(
+      title: 'Review Appliance',
+      submitLabel: 'Add Appliance',
+      seed: _ApplianceFormSeed.fromDetected(detected),
+      capturedImage: image,
+      helperMessage: detected.message,
+    );
+  }
+
+  DateTime? _parseUiDate(String value) {
+    if (value.trim().isEmpty) return null;
+    try {
+      return DateFormat('MMM dd, yyyy').parse(value);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String _formatUiDate(DateTime? value) {
+    if (value == null) return '';
+    return DateFormat('MMM dd, yyyy').format(value);
   }
 
   Color _getStatusColor(String status) {
@@ -183,28 +301,49 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
       case 'Needs Repair':
         return AppTheme.danger;
       case 'Under Warranty':
-        return AppTheme.accentGold;
+        return Theme.of(context).colorScheme.primary;
       default:
-        return AppTheme.textSecondary;
+        return Theme.of(context).colorScheme.onSurfaceVariant;
     }
+  }
+
+  String _buildSecondaryText(Appliance appliance) {
+    final parts = [
+      appliance.brand.trim(),
+      appliance.model.trim(),
+    ].where((value) => value.isNotEmpty).toList();
+    return parts.join(' | ');
   }
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddDialog,
-        backgroundColor: AppTheme.accentGold,
-        elevation: 0,
-        child: const Icon(Icons.add_rounded, color: Colors.black),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          FloatingActionButton.small(
+            heroTag: 'scan_appliance_fab',
+            onPressed: _scanApplianceFromCamera,
+            child: const Icon(Icons.camera_alt_rounded),
+          ),
+          const SizedBox(height: 12),
+          FloatingActionButton(
+            heroTag: 'add_appliance_fab',
+            onPressed: _showAddDialog,
+            child: const Icon(Icons.add_rounded),
+          ),
+        ],
       ),
       body: StreamBuilder<List<Appliance>>(
         stream: _firestoreService.streamAppliances(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppTheme.accentGold),
+            return Center(
+              child: CircularProgressIndicator(color: cs.primary),
             );
           }
           final appliances = snapshot.data ?? [];
@@ -214,26 +353,27 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Stats row
                 Row(
                   children: [
                     Expanded(
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppTheme.cardBg,
+                          color: cs.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppTheme.glassBorder),
+                          border: Border.all(
+                            color: cs.outlineVariant.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               '${appliances.length}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 32,
                                 fontWeight: FontWeight.w800,
-                                color: AppTheme.accentSilver,
+                                color: cs.secondary,
                                 letterSpacing: -1,
                               ),
                             ),
@@ -242,9 +382,8 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.textSecondary.withValues(
-                                  alpha: 0.5,
-                                ),
+                                color: cs.onSurfaceVariant
+                                    .withValues(alpha: 0.5),
                                 letterSpacing: 1.5,
                               ),
                             ),
@@ -257,9 +396,11 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: AppTheme.cardBg,
+                          color: cs.surfaceContainerHigh,
                           borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: AppTheme.glassBorder),
+                          border: Border.all(
+                            color: cs.outlineVariant.withValues(alpha: 0.3),
+                          ),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,9 +419,8 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                               style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: AppTheme.textSecondary.withValues(
-                                  alpha: 0.5,
-                                ),
+                                color: cs.onSurfaceVariant
+                                    .withValues(alpha: 0.5),
                                 letterSpacing: 1.5,
                               ),
                             ),
@@ -291,7 +431,6 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                   ],
                 ),
                 const SizedBox(height: 32),
-
                 if (appliances.isEmpty)
                   Center(
                     child: Padding(
@@ -301,27 +440,35 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                           Icon(
                             Icons.devices_rounded,
                             size: 56,
-                            color: AppTheme.textMuted.withValues(alpha: 0.3),
+                            color: cs.outline.withValues(alpha: 0.3),
                           ),
                           const SizedBox(height: 16),
-                          const Text(
+                          Text(
                             'No appliances yet',
                             style: TextStyle(
-                              color: AppTheme.textSecondary,
+                              color: cs.onSurfaceVariant,
                               fontSize: 15,
                               fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Add one manually or scan it with the camera.',
+                            style: TextStyle(
+                              color: cs.onSurfaceVariant
+                                  .withValues(alpha: 0.7),
+                              fontSize: 13,
                             ),
                           ),
                         ],
                       ),
                     ),
                   ),
-
                 if (appliances.isNotEmpty)
                   const SectionHeader(title: 'Your Appliances'),
-
                 ...appliances.map((appliance) {
                   final statusColor = _getStatusColor(appliance.status);
+                  final secondaryText = _buildSecondaryText(appliance);
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Dismissible(
@@ -357,21 +504,23 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                                     children: [
                                       Text(
                                         appliance.name,
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           fontSize: 16,
-                                          color: AppTheme.textPrimary,
+                                          color: cs.onSurface,
                                         ),
                                       ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        appliance.brand,
-                                        style: TextStyle(
-                                          color: AppTheme.textSecondary
-                                              .withValues(alpha: 0.6),
-                                          fontSize: 13,
+                                      if (secondaryText.isNotEmpty) ...[
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          secondaryText,
+                                          style: TextStyle(
+                                            color: cs.onSurfaceVariant
+                                                .withValues(alpha: 0.6),
+                                            fontSize: 13,
+                                          ),
                                         ),
-                                      ),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -382,13 +531,31 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            Container(height: 1, color: AppTheme.glassBorder),
+                            Container(
+                              height: 1,
+                              color: cs.outlineVariant.withValues(alpha: 0.2),
+                            ),
                             const SizedBox(height: 12),
-                            Row(
+                            Wrap(
+                              spacing: 24,
+                              runSpacing: 12,
                               children: [
-                                _infoChip('Purchased', appliance.purchaseDate),
-                                const SizedBox(width: 24),
-                                _infoChip('Warranty', appliance.warrantyExpiry),
+                                _infoChip(
+                                  'Category',
+                                  appliance.category,
+                                ),
+                                _infoChip(
+                                  'Model',
+                                  appliance.model,
+                                ),
+                                _infoChip(
+                                  'Purchased',
+                                  appliance.purchaseDate,
+                                ),
+                                _infoChip(
+                                  'Warranty',
+                                  appliance.warrantyExpiry,
+                                ),
                               ],
                             ),
                           ],
@@ -406,6 +573,7 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
   }
 
   Widget _infoChip(String label, String value) {
+    final cs = Theme.of(context).colorScheme;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -414,20 +582,87 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
           style: TextStyle(
             fontSize: 9,
             fontWeight: FontWeight.w600,
-            color: AppTheme.textSecondary.withValues(alpha: 0.4),
+            color: cs.onSurfaceVariant.withValues(alpha: 0.4),
             letterSpacing: 1.2,
           ),
         ),
         const SizedBox(height: 2),
         Text(
-          value.isNotEmpty ? value : '—',
-          style: const TextStyle(
+          value.isNotEmpty ? value : '-',
+          style: TextStyle(
             fontSize: 13,
-            color: AppTheme.textPrimary,
+            color: cs.onSurface,
             fontWeight: FontWeight.w500,
           ),
         ),
       ],
+    );
+  }
+}
+
+class _ApplianceFormSeed {
+  const _ApplianceFormSeed({
+    this.name = '',
+    this.brand = '',
+    this.category = 'Other',
+    this.model = '',
+    this.purchaseDate = '',
+    this.warrantyExpiry = '',
+    this.status = 'Healthy',
+  });
+
+  factory _ApplianceFormSeed.fromDetected(DetectedApplianceDetails detected) {
+    return _ApplianceFormSeed(
+      name: detected.name,
+      brand: detected.brand,
+      category: detected.category,
+      model: detected.model,
+    );
+  }
+
+  final String name;
+  final String brand;
+  final String category;
+  final String model;
+  final String purchaseDate;
+  final String warrantyExpiry;
+  final String status;
+}
+
+class _CapturedAppliancePreview extends StatelessWidget {
+  const _CapturedAppliancePreview({required this.imageBytes});
+
+  final Future<Uint8List> imageBytes;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return FutureBuilder<Uint8List>(
+      future: imageBytes,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return Container(
+            height: 180,
+            decoration: BoxDecoration(
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Center(
+              child: CircularProgressIndicator(color: cs.primary),
+            ),
+          );
+        }
+
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: Image.memory(
+            snapshot.data!,
+            height: 180,
+            width: double.infinity,
+            fit: BoxFit.cover,
+          ),
+        );
+      },
     );
   }
 }

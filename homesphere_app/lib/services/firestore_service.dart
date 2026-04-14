@@ -1,7 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:intl/intl.dart';
 import '../models/models.dart';
-
+import 'notification_service.dart';
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
@@ -36,16 +37,19 @@ class FirestoreService {
   }
 
   Future<void> addSubscription(Subscription sub) async {
-    await _subscriptionsRef.add(sub.toMap());
+    final docRef = await _subscriptionsRef.add(sub.toMap());
+    _scheduleSubscriptionNotification(sub, docRef.id);
   }
 
   Future<void> updateSubscription(Subscription sub) async {
     if (sub.id == null) return;
     await _subscriptionsRef.doc(sub.id).update(sub.toMap());
+    _scheduleSubscriptionNotification(sub, sub.id!);
   }
 
   Future<void> deleteSubscription(String docId) async {
     await _subscriptionsRef.doc(docId).delete();
+    NotificationService().cancel(docId.hashCode);
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -66,16 +70,19 @@ class FirestoreService {
   }
 
   Future<void> addAppliance(Appliance appliance) async {
-    await _appliancesRef.add(appliance.toMap());
+    final docRef = await _appliancesRef.add(appliance.toMap());
+    _scheduleApplianceNotification(appliance, docRef.id);
   }
 
   Future<void> updateAppliance(Appliance appliance) async {
     if (appliance.id == null) return;
     await _appliancesRef.doc(appliance.id).update(appliance.toMap());
+    _scheduleApplianceNotification(appliance, appliance.id!);
   }
 
   Future<void> deleteAppliance(String docId) async {
     await _appliancesRef.doc(docId).delete();
+    NotificationService().cancel(docId.hashCode);
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -96,16 +103,20 @@ class FirestoreService {
   }
 
   Future<void> addVehicle(Vehicle vehicle) async {
-    await _vehiclesRef.add(vehicle.toMap());
+    final docRef = await _vehiclesRef.add(vehicle.toMap());
+    _scheduleVehicleNotification(vehicle, docRef.id);
   }
 
   Future<void> updateVehicle(Vehicle vehicle) async {
     if (vehicle.id == null) return;
     await _vehiclesRef.doc(vehicle.id).update(vehicle.toMap());
+    _scheduleVehicleNotification(vehicle, vehicle.id!);
   }
 
   Future<void> deleteVehicle(String docId) async {
     await _vehiclesRef.doc(docId).delete();
+    NotificationService().cancel(docId.hashCode);
+    NotificationService().cancel('${docId}_puc'.hashCode);
   }
 
   // ══════════════════════════════════════════════════════════════════════
@@ -140,4 +151,86 @@ class FirestoreService {
   Future<void> deleteServiceProvider(String docId) async {
     await _providersRef.doc(docId).delete();
   }
+
+  // ══════════════════════════════════════════════════════════════════════
+  // NOTIFICATION HELPERS
+  // ══════════════════════════════════════════════════════════════════════
+
+  DateTime? _parseDate(String dateStr) {
+    if (dateStr.isEmpty) return null;
+    try {
+      // Common format is 'MMM dd, yyyy' from the UI
+      return DateFormat('MMM dd, yyyy').parse(dateStr);
+    } catch (_) {
+      try {
+        return DateFormat('MM/dd/yyyy').parse(dateStr);
+      } catch (_) {}
+    }
+    return null;
+  }
+
+  void _scheduleSubscriptionNotification(Subscription sub, String id) {
+    if (!sub.isActive) {
+      NotificationService().cancel(id.hashCode);
+      return;
+    }
+    final date = _parseDate(sub.nextBilling);
+    if (date == null) return;
+    
+    // Remind 1 day before at 10 AM
+    final scheduleTime = DateTime(date.year, date.month, date.day, 10, 0)
+        .subtract(const Duration(days: 1));
+        
+    NotificationService().scheduleNotification(
+      id: id.hashCode,
+      title: 'Upcoming Subscription Renewal',
+      body: '${sub.name} is renewing tomorrow for ${sub.price}.',
+      scheduledDate: scheduleTime,
+    );
+  }
+
+  void _scheduleApplianceNotification(Appliance appliance, String id) {
+    final date = _parseDate(appliance.warrantyExpiry);
+    if (date == null) return;
+    
+    // Remind 7 days before
+    final scheduleTime = DateTime(date.year, date.month, date.day, 10, 0)
+        .subtract(const Duration(days: 7));
+
+    NotificationService().scheduleNotification(
+      id: id.hashCode,
+      title: 'Warranty Expiring Soon',
+      body: 'Your ${appliance.brand} ${appliance.name} warranty expires in 7 days.',
+      scheduledDate: scheduleTime,
+    );
+  }
+
+  void _scheduleVehicleNotification(Vehicle vehicle, String id) {
+    // Insurance Reminder
+    final insuranceDate = _parseDate(vehicle.insuranceExpiry);
+    if (insuranceDate != null) {
+      final scheduleTime = DateTime(insuranceDate.year, insuranceDate.month, insuranceDate.day, 10, 0)
+          .subtract(const Duration(days: 7));
+      NotificationService().scheduleNotification(
+        id: id.hashCode,
+        title: 'Vehicle Insurance Expiring',
+        body: 'Insurance for ${vehicle.name} (${vehicle.regNumber}) expires in 7 days.',
+        scheduledDate: scheduleTime,
+      );
+    }
+    
+    // PUC Reminder
+    final pucDate = _parseDate(vehicle.pucExpiry);
+    if (pucDate != null) {
+      final scheduleTime = DateTime(pucDate.year, pucDate.month, pucDate.day, 10, 0)
+          .subtract(const Duration(days: 5));
+      NotificationService().scheduleNotification(
+        id: '${id}_puc'.hashCode,
+        title: 'Vehicle PUC Expiring',
+        body: 'PUC for ${vehicle.name} (${vehicle.regNumber}) expires in 5 days.',
+        scheduledDate: scheduleTime,
+      );
+    }
+  }
 }
+

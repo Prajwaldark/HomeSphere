@@ -1,123 +1,162 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // CRED-Inspired True Black Palette
-  static const Color bgColor = Color(0xFF000000);
-  static const Color panelBg = Color(0xFF0A0A0A);
-  static const Color cardBg = Color(0xFF111111);
-  static const Color surfaceLight = Color(0xFF1A1A1A);
+  // Seed color for Material 3 palette generation
+  static const Color _seedColor = Color(0xFF6366F1); // Modern indigo-violet
 
-  // Accent Colors — Warm Metallics
-  static const Color accentGold = Color(0xFFD4AF37);
-  static const Color accentChampagne = Color(0xFFF5E6CC);
-  static const Color accentSilver = Color(0xFFC0C0C0);
-  static const Color accentColor = accentGold; // Primary accent
+  // Semantic colors (not part of Material ColorScheme)
+  static const Color success = Color(0xFF22C55E);
+  static const Color warning = Color(0xFFF59E0B);
+  static const Color danger = Color(0xFFEF4444);
 
-  // Legacy aliases for compatibility
-  static const Color accentPurple = Color(0xFFB8860B); // Dark goldenrod
-
-  // Text Colors
-  static const Color textPrimary = Color(0xFFF5F5F5);
-  static const Color textSecondary = Color(0xFF6B6B6B);
-  static const Color textMuted = Color(0xFF3D3D3D);
-
-  // Borders
-  static const Color glassBorder = Color(0x0AFFFFFF); // 4% white
-  static const Color subtleBorder = Color(0x14FFFFFF); // 8% white
-
-  // Semantic Colors
-  static const Color success = Color(0xFF2ECC71);
-  static const Color warning = Color(0xFFE6A817);
-  static const Color danger = Color(0xFFE74C3C);
-
+  // ─── Dark Theme ───
   static ThemeData get darkTheme {
-    return ThemeData(
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: _seedColor,
       brightness: Brightness.dark,
-      scaffoldBackgroundColor: bgColor,
+    );
+
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.dark,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.surface,
       fontFamily: 'Outfit',
-      colorScheme: const ColorScheme.dark(
-        primary: accentGold,
-        secondary: accentChampagne,
-        surface: panelBg,
-        error: danger,
-      ),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
+        surfaceTintColor: Colors.transparent,
         titleTextStyle: TextStyle(
           fontFamily: 'Outfit',
           fontSize: 28,
           fontWeight: FontWeight.w800,
-          color: textPrimary,
+          color: colorScheme.onSurface,
           letterSpacing: -1.0,
         ),
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
       ),
-      bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: bgColor,
-        selectedItemColor: accentGold,
-        unselectedItemColor: textMuted,
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: colorScheme.surface,
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: colorScheme.outline,
         type: BottomNavigationBarType.fixed,
         elevation: 0,
         showSelectedLabels: false,
         showUnselectedLabels: false,
       ),
       cardTheme: CardThemeData(
-        color: cardBg,
+        color: colorScheme.surfaceContainerHigh,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: glassBorder),
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
         ),
-        margin: const EdgeInsets.only(bottom: 16),
+        margin: const EdgeInsets.only(bottom: 12),
       ),
-      floatingActionButtonTheme: const FloatingActionButtonThemeData(
-        backgroundColor: accentGold,
-        foregroundColor: Colors.black,
-        elevation: 0,
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
       ),
-      textTheme: const TextTheme(
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.error, width: 1.5),
+        ),
+        labelStyle: TextStyle(
+          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+          fontSize: 13,
+          letterSpacing: 0.5,
+        ),
+        hintStyle: TextStyle(
+          color: colorScheme.outline.withValues(alpha: 0.5),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colorScheme.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          return colorScheme.outline;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary.withValues(alpha: 0.3);
+          }
+          return colorScheme.surfaceContainerHighest;
+        }),
+      ),
+      textTheme: TextTheme(
         headlineLarge: TextStyle(
           fontFamily: 'Outfit',
           fontWeight: FontWeight.w800,
-          color: textPrimary,
+          color: colorScheme.onSurface,
           letterSpacing: -1.5,
           fontSize: 36,
         ),
         headlineMedium: TextStyle(
           fontFamily: 'Outfit',
           fontWeight: FontWeight.w700,
-          color: textPrimary,
+          color: colorScheme.onSurface,
           letterSpacing: -1.0,
           fontSize: 28,
         ),
         titleLarge: TextStyle(
           fontFamily: 'Outfit',
           fontWeight: FontWeight.w700,
-          color: textPrimary,
+          color: colorScheme.onSurface,
           letterSpacing: -0.5,
           fontSize: 20,
         ),
         titleMedium: TextStyle(
           fontFamily: 'Outfit',
           fontWeight: FontWeight.w600,
-          color: textPrimary,
+          color: colorScheme.onSurface,
           fontSize: 16,
         ),
         bodyLarge: TextStyle(
           fontFamily: 'Outfit',
-          color: textPrimary,
+          color: colorScheme.onSurface,
           fontSize: 15,
         ),
         bodyMedium: TextStyle(
           fontFamily: 'Outfit',
-          color: textSecondary,
+          color: colorScheme.onSurfaceVariant,
           fontSize: 14,
         ),
         labelSmall: TextStyle(
           fontFamily: 'Outfit',
-          color: textSecondary,
+          color: colorScheme.onSurfaceVariant,
           fontSize: 11,
           letterSpacing: 1.2,
           fontWeight: FontWeight.w500,
@@ -126,53 +165,182 @@ class AppTheme {
     );
   }
 
-  // Premium Gold Gradient
-  static LinearGradient get premiumGradient => const LinearGradient(
-    colors: [Color(0xFFD4AF37), Color(0xFFF5E6CC)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  // ─── Light Theme ───
+  static ThemeData get lightTheme {
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: _seedColor,
+      brightness: Brightness.light,
+    );
 
-  // Subtle dark gradient for cards
-  static LinearGradient get cardGradient => const LinearGradient(
-    colors: [Color(0xFF111111), Color(0xFF0D0D0D)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+    return ThemeData(
+      useMaterial3: true,
+      brightness: Brightness.light,
+      colorScheme: colorScheme,
+      scaffoldBackgroundColor: colorScheme.surface,
+      fontFamily: 'Outfit',
+      appBarTheme: AppBarTheme(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: false,
+        surfaceTintColor: Colors.transparent,
+        titleTextStyle: TextStyle(
+          fontFamily: 'Outfit',
+          fontSize: 28,
+          fontWeight: FontWeight.w800,
+          color: colorScheme.onSurface,
+          letterSpacing: -1.0,
+        ),
+        iconTheme: IconThemeData(color: colorScheme.onSurface),
+      ),
+      bottomNavigationBarTheme: BottomNavigationBarThemeData(
+        backgroundColor: colorScheme.surface,
+        selectedItemColor: colorScheme.primary,
+        unselectedItemColor: colorScheme.outline,
+        type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        showSelectedLabels: false,
+        showUnselectedLabels: false,
+      ),
+      cardTheme: CardThemeData(
+        color: colorScheme.surfaceContainerLow,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.3)),
+        ),
+        margin: const EdgeInsets.only(bottom: 12),
+      ),
+      floatingActionButtonTheme: FloatingActionButtonThemeData(
+        backgroundColor: colorScheme.primary,
+        foregroundColor: colorScheme.onPrimary,
+        elevation: 2,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.4),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.outlineVariant.withValues(alpha: 0.4)),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.primary, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(16),
+          borderSide: BorderSide(color: colorScheme.error, width: 1.5),
+        ),
+        labelStyle: TextStyle(
+          color: colorScheme.onSurfaceVariant.withValues(alpha: 0.7),
+          fontSize: 13,
+          letterSpacing: 0.5,
+        ),
+        hintStyle: TextStyle(
+          color: colorScheme.outline.withValues(alpha: 0.5),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: colorScheme.surfaceContainerHigh,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return colorScheme.primary;
+          return colorScheme.outline;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.primary.withValues(alpha: 0.3);
+          }
+          return colorScheme.surfaceContainerHighest;
+        }),
+      ),
+      textTheme: TextTheme(
+        headlineLarge: TextStyle(
+          fontFamily: 'Outfit',
+          fontWeight: FontWeight.w800,
+          color: colorScheme.onSurface,
+          letterSpacing: -1.5,
+          fontSize: 36,
+        ),
+        headlineMedium: TextStyle(
+          fontFamily: 'Outfit',
+          fontWeight: FontWeight.w700,
+          color: colorScheme.onSurface,
+          letterSpacing: -1.0,
+          fontSize: 28,
+        ),
+        titleLarge: TextStyle(
+          fontFamily: 'Outfit',
+          fontWeight: FontWeight.w700,
+          color: colorScheme.onSurface,
+          letterSpacing: -0.5,
+          fontSize: 20,
+        ),
+        titleMedium: TextStyle(
+          fontFamily: 'Outfit',
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface,
+          fontSize: 16,
+        ),
+        bodyLarge: TextStyle(
+          fontFamily: 'Outfit',
+          color: colorScheme.onSurface,
+          fontSize: 15,
+        ),
+        bodyMedium: TextStyle(
+          fontFamily: 'Outfit',
+          color: colorScheme.onSurfaceVariant,
+          fontSize: 14,
+        ),
+        labelSmall: TextStyle(
+          fontFamily: 'Outfit',
+          color: colorScheme.onSurfaceVariant,
+          fontSize: 11,
+          letterSpacing: 1.2,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
 
-  // Silver shimmer gradient
-  static LinearGradient get silverGradient => const LinearGradient(
-    colors: [Color(0xFF8C8C8C), Color(0xFFC0C0C0), Color(0xFF8C8C8C)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
-  );
+  // ─── Helper: primary gradient from colorScheme ───
+  static LinearGradient primaryGradient(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return LinearGradient(
+      colors: [cs.primary, cs.tertiary],
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+    );
+  }
 
-  static BoxDecoration get glassDecoration => BoxDecoration(
-    color: cardBg,
-    borderRadius: BorderRadius.circular(24),
-    border: Border.all(color: glassBorder),
-  );
-
-  static BoxDecoration get elevatedCardDecoration => BoxDecoration(
-    color: cardBg,
-    borderRadius: BorderRadius.circular(24),
-    border: Border.all(color: glassBorder),
-    boxShadow: [
+  // ─── Helper: primary glow shadow ───
+  static List<BoxShadow> primaryGlow(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return [
       BoxShadow(
-        color: Colors.black.withValues(alpha: 0.4),
-        blurRadius: 32,
+        color: cs.primary.withValues(alpha: 0.25),
+        blurRadius: 24,
+        spreadRadius: 0,
         offset: const Offset(0, 8),
       ),
-    ],
-  );
-
-  // Gold accent glow for CTAs
-  static List<BoxShadow> get goldGlow => [
-    BoxShadow(
-      color: accentGold.withValues(alpha: 0.25),
-      blurRadius: 24,
-      spreadRadius: 0,
-      offset: const Offset(0, 8),
-    ),
-  ];
+    ];
+  }
 }

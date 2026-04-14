@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
+import '../services/notification_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/stat_card.dart';
+import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -24,13 +26,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final email = _user.email ?? '';
     final name = email.split('@').first;
     if (name.isEmpty) return 'User';
-    // Capitalize and replace separators with spaces
     return name
         .replaceAll(RegExp(r'[._]'), ' ')
         .split(' ')
-        .map(
-          (w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '',
-        )
+        .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
         .join(' ');
   }
 
@@ -45,7 +44,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showEditNameDialog() {
     final nameCtrl = TextEditingController(text: _user?.displayName ?? '');
-
     CREDBottomSheet.show(
       context: context,
       title: 'Edit Profile',
@@ -63,16 +61,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 await _user?.updateDisplayName(newName);
                 await _user?.reload();
                 if (ctx.mounted) Navigator.pop(ctx);
-                setState(() {}); // Refresh UI
+                setState(() {});
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: const Text('Name updated successfully'),
                       backgroundColor: AppTheme.success,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
                     ),
                   );
                 }
@@ -82,7 +76,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     SnackBar(
                       content: Text('Error: $e'),
                       backgroundColor: AppTheme.danger,
-                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
@@ -117,11 +110,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (newPassCtrl.text.isEmpty || newPassCtrl.text.length < 6) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
                   SnackBar(
-                    content: const Text(
-                      'Password must be at least 6 characters',
-                    ),
+                    content: const Text('Password must be at least 6 characters'),
                     backgroundColor: AppTheme.danger,
-                    behavior: SnackBarBehavior.floating,
                   ),
                 );
                 return;
@@ -131,13 +121,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SnackBar(
                     content: const Text('Passwords do not match'),
                     backgroundColor: AppTheme.danger,
-                    behavior: SnackBarBehavior.floating,
                   ),
                 );
                 return;
               }
               try {
-                // Re-authenticate first
                 final cred = EmailAuthProvider.credential(
                   email: _user!.email!,
                   password: currentPassCtrl.text,
@@ -150,10 +138,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     SnackBar(
                       content: const Text('Password updated successfully'),
                       backgroundColor: AppTheme.success,
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
-                      ),
                     ),
                   );
                 }
@@ -165,7 +149,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         'Error: ${e.toString().contains('wrong-password') ? 'Current password is incorrect' : e}',
                       ),
                       backgroundColor: AppTheme.danger,
-                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
@@ -178,29 +161,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showDeleteAccountDialog() {
+    final cs = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.panelBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: AppTheme.glassBorder),
-        ),
-        title: const Text(
+        title: Text(
           'Delete Account',
-          style: TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w700),
+          style: TextStyle(color: cs.error, fontWeight: FontWeight.w700),
         ),
-        content: const Text(
+        content: Text(
           'This action is permanent and cannot be undone. All your data will be lost.',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: cs.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
+            child: Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () async {
@@ -211,22 +187,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                        'Error: $e. Please sign in again and retry.',
-                      ),
+                      content: Text('Error: $e. Please sign in again and retry.'),
                       backgroundColor: AppTheme.danger,
-                      behavior: SnackBarBehavior.floating,
                     ),
                   );
                 }
               }
             },
-            child: const Text(
+            child: Text(
               'Delete',
-              style: TextStyle(
-                color: AppTheme.danger,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: cs.error, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -235,44 +205,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   void _showSignOutDialog() {
+    final cs = Theme.of(context).colorScheme;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.panelBg,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(24),
-          side: const BorderSide(color: AppTheme.glassBorder),
-        ),
-        title: const Text(
+        title: Text(
           'Sign Out',
-          style: TextStyle(
-            color: AppTheme.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
+          style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700),
         ),
-        content: const Text(
+        content: Text(
           'Are you sure you want to sign out?',
-          style: TextStyle(color: AppTheme.textSecondary),
+          style: TextStyle(color: cs.onSurfaceVariant),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: AppTheme.textSecondary),
-            ),
+            child: Text('Cancel', style: TextStyle(color: cs.onSurfaceVariant)),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               await _authService.signOut();
             },
-            child: const Text(
+            child: Text(
               'Sign Out',
-              style: TextStyle(
-                color: AppTheme.accentGold,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(color: cs.primary, fontWeight: FontWeight.w700),
             ),
           ),
         ],
@@ -282,25 +239,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final themeProvider = HomeSphereApp.of(context);
+    final isDark = themeProvider.isDarkMode;
+
     return Scaffold(
-      backgroundColor: AppTheme.bgColor,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_rounded,
-            color: AppTheme.textPrimary,
-          ),
+          icon: Icon(Icons.arrow_back_rounded, color: cs.onSurface),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text(
+        title: Text(
           'Settings',
           style: TextStyle(
             fontSize: 28,
             fontWeight: FontWeight.w800,
             letterSpacing: -1.0,
+            color: cs.onSurface,
           ),
         ),
       ),
@@ -314,26 +269,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(24),
               decoration: BoxDecoration(
-                color: AppTheme.cardBg,
+                color: cs.surfaceContainerHigh,
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: AppTheme.glassBorder),
+                border: Border.all(
+                  color: cs.outlineVariant.withValues(alpha: 0.3),
+                ),
               ),
               child: Column(
                 children: [
-                  // Avatar
                   Container(
                     padding: const EdgeInsets.all(3),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: AppTheme.premiumGradient,
+                      gradient: AppTheme.primaryGradient(context),
                     ),
                     child: CircleAvatar(
                       radius: 40,
-                      backgroundColor: AppTheme.cardBg,
+                      backgroundColor: cs.surfaceContainerHigh,
                       child: Text(
                         _getInitials(),
-                        style: const TextStyle(
-                          color: AppTheme.accentGold,
+                        style: TextStyle(
+                          color: cs.primary,
                           fontSize: 28,
                           fontWeight: FontWeight.w800,
                         ),
@@ -343,10 +299,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 16),
                   Text(
                     _getDisplayName(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
-                      color: AppTheme.textPrimary,
+                      color: cs.onSurface,
                       letterSpacing: -0.5,
                     ),
                   ),
@@ -355,17 +311,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     _user?.email ?? '',
                     style: TextStyle(
                       fontSize: 14,
-                      color: AppTheme.textSecondary.withValues(alpha: 0.6),
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.6),
                     ),
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 4,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                     decoration: BoxDecoration(
-                      color: AppTheme.accentGold.withValues(alpha: 0.08),
+                      color: (_user?.emailVerified == true
+                              ? AppTheme.success
+                              : AppTheme.warning)
+                          .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -387,10 +343,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       icon: const Icon(Icons.edit_rounded, size: 16),
                       label: const Text('Edit Name'),
                       style: OutlinedButton.styleFrom(
-                        foregroundColor: AppTheme.accentGold,
-                        side: BorderSide(
-                          color: AppTheme.accentGold.withValues(alpha: 0.3),
-                        ),
+                        foregroundColor: cs.primary,
+                        side: BorderSide(color: cs.primary.withValues(alpha: 0.3)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -403,7 +357,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 32),
 
-            // ── Account Section ──
+            // ── Account ──
             const SectionHeader(title: 'Account'),
             _buildSettingsTile(
               icon: Icons.lock_outline_rounded,
@@ -416,15 +370,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.email_outlined,
               title: 'Email',
               subtitle: _user?.email ?? 'Not set',
-              trailing: const Icon(
-                Icons.verified_rounded,
-                size: 16,
-                color: AppTheme.success,
-              ),
+              trailing: Icon(Icons.verified_rounded, size: 16, color: AppTheme.success),
             ),
             const SizedBox(height: 32),
 
-            // ── Preferences Section ──
+            // ── Preferences ──
             const SectionHeader(title: 'Preferences'),
             _buildSettingsTile(
               icon: Icons.notifications_none_rounded,
@@ -432,27 +382,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: 'Reminders & alerts',
               trailing: Switch(
                 value: _notificationsEnabled,
-                onChanged: (v) => setState(() => _notificationsEnabled = v),
-                activeColor: AppTheme.accentGold,
-                activeTrackColor: AppTheme.accentGold.withValues(alpha: 0.3),
-                inactiveThumbColor: AppTheme.textMuted,
-                inactiveTrackColor: AppTheme.surfaceLight,
+                onChanged: (v) async {
+                  setState(() => _notificationsEnabled = v);
+                  if (v) {
+                    await NotificationService().requestPermissions();
+                  } else {
+                    await NotificationService().cancelAll();
+                  }
+                },
               ),
             ),
             const SizedBox(height: 8),
+            // Theme toggle
             _buildSettingsTile(
-              icon: Icons.dark_mode_rounded,
-              title: 'Theme',
-              subtitle: 'Dark (CRED style)',
-              trailing: Icon(
-                Icons.palette_rounded,
-                size: 18,
-                color: AppTheme.accentGold.withValues(alpha: 0.5),
+              icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
+              title: 'Appearance',
+              subtitle: isDark ? 'Dark mode' : 'Light mode',
+              trailing: GestureDetector(
+                onTap: () => themeProvider.toggleTheme(),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 64,
+                  height: 32,
+                  padding: const EdgeInsets.all(3),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(20),
+                    color: isDark
+                        ? cs.surfaceContainerHighest
+                        : cs.primaryContainer,
+                    border: Border.all(
+                      color: isDark
+                          ? cs.outlineVariant.withValues(alpha: 0.3)
+                          : Colors.transparent,
+                    ),
+                  ),
+                  child: AnimatedAlign(
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeInOut,
+                    alignment:
+                        isDark ? Alignment.centerLeft : Alignment.centerRight,
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: isDark ? cs.primary : cs.onPrimaryContainer,
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.15),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: Icon(
+                        isDark ? Icons.nightlight_round : Icons.wb_sunny_rounded,
+                        size: 14,
+                        color: isDark ? cs.onPrimary : cs.primaryContainer,
+                      ),
+                    ),
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: 32),
 
-            // ── About Section ──
+            // ── About ──
             const SectionHeader(title: 'About'),
             _buildSettingsTile(
               icon: Icons.info_outline_rounded,
@@ -509,30 +504,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Color? iconColor,
     Color? titleColor,
   }) {
+    final cs = Theme.of(context).colorScheme;
+    final effectiveIconColor = iconColor ?? cs.onSurfaceVariant;
+
     return GestureDetector(
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppTheme.cardBg,
+          color: cs.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppTheme.glassBorder),
+          border: Border.all(
+            color: cs.outlineVariant.withValues(alpha: 0.3),
+          ),
         ),
         child: Row(
           children: [
             Container(
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: (iconColor ?? AppTheme.textSecondary).withValues(
-                  alpha: 0.08,
-                ),
+                color: effectiveIconColor.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
                 icon,
-                color: (iconColor ?? AppTheme.textSecondary).withValues(
-                  alpha: 0.7,
-                ),
+                color: effectiveIconColor.withValues(alpha: 0.7),
                 size: 20,
               ),
             ),
@@ -546,14 +542,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 15,
-                      color: titleColor ?? AppTheme.textPrimary,
+                      color: titleColor ?? cs.onSurface,
                     ),
                   ),
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: AppTheme.textSecondary.withValues(alpha: 0.5),
+                      color: cs.onSurfaceVariant.withValues(alpha: 0.5),
                       fontSize: 12,
                     ),
                   ),
@@ -565,7 +561,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             else if (onTap != null)
               Icon(
                 Icons.chevron_right_rounded,
-                color: AppTheme.textMuted.withValues(alpha: 0.5),
+                color: cs.outline.withValues(alpha: 0.5),
                 size: 20,
               ),
           ],
