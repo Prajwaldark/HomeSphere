@@ -196,6 +196,11 @@ class AuthService {
     await _auth.signOut();
   }
 
+  /// Send a password reset email to the given email address.
+  Future<void> sendPasswordResetEmail(String email) async {
+    await _auth.sendPasswordResetEmail(email: email);
+  }
+
   void _ensureGoogleSignInSupported(String message) {
     if (!supportsGoogleSignIn) {
       throw AuthFailure(message);

@@ -149,6 +149,9 @@ class ServiceProvider {
   final double rating;
   final String phone;
   final String location;
+  final double? distanceKm;
+  final String? placeId;
+  final String? source;
 
   ServiceProvider({
     this.id,
@@ -157,6 +160,9 @@ class ServiceProvider {
     required this.rating,
     required this.phone,
     required this.location,
+    this.distanceKm,
+    this.placeId,
+    this.source,
   });
 
   Map<String, dynamic> toMap() => {
@@ -165,6 +171,9 @@ class ServiceProvider {
     'rating': rating,
     'phone': phone,
     'location': location,
+    if (distanceKm != null) 'distanceKm': distanceKm,
+    if (placeId != null) 'placeId': placeId,
+    if (source != null) 'source': source,
   };
 
   factory ServiceProvider.fromMap(Map<String, dynamic> map, String id) {
@@ -175,6 +184,9 @@ class ServiceProvider {
       rating: (map['rating'] ?? 0).toDouble(),
       phone: map['phone'] ?? '',
       location: map['location'] ?? '',
+      distanceKm: (map['distanceKm'] as num?)?.toDouble(),
+      placeId: map['placeId']?.toString(),
+      source: map['source']?.toString(),
     );
   }
 }

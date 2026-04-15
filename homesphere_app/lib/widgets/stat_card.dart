@@ -18,25 +18,23 @@ class StatCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: cs.surfaceContainerHigh,
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: cs.outlineVariant.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: Icon(icon, color: color, size: 22),
+            child: Icon(icon, color: color, size: 24),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,17 +42,17 @@ class StatCard extends StatelessWidget {
               Text(
                 value,
                 style: TextStyle(
-                  fontSize: 32,
+                  fontSize: 28,
                   fontWeight: FontWeight.w800,
                   color: color,
                   letterSpacing: -1.0,
                 ),
               ),
-              const SizedBox(height: 2),
+              const SizedBox(height: 4),
               Text(
                 label.toUpperCase(),
                 style: TextStyle(
-                  color: cs.onSurfaceVariant.withValues(alpha: 0.7),
+                  color: cs.onSurfaceVariant.withValues(alpha: 0.6),
                   fontSize: 10,
                   letterSpacing: 1.5,
                   fontWeight: FontWeight.w600,
@@ -80,14 +78,13 @@ class GlassCard extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        padding: padding ?? const EdgeInsets.all(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: padding ?? const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: cs.surfaceContainerHigh,
+          color: cs.surfaceContainerLow.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: cs.outlineVariant.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.2)),
         ),
         child: child,
       ),
@@ -139,17 +136,17 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-      padding: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             title.toUpperCase(),
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 13,
               fontWeight: FontWeight.w700,
-              letterSpacing: 2.0,
-              color: cs.onSurfaceVariant,
+              letterSpacing: 1.5,
+              color: cs.onSurfaceVariant.withValues(alpha: 0.7),
             ),
           ),
           if (trailing != null)
@@ -160,7 +157,7 @@ class SectionHeader extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: cs.primary.withValues(alpha: 0.7),
+                  color: cs.primary,
                 ),
               ),
             ),
@@ -189,9 +186,9 @@ class CREDBottomSheet {
           final maxSheetHeight = mediaQuery.size.height * 0.9;
           final bottomPadding =
               (mediaQuery.viewInsets.bottom > 0
-                      ? mediaQuery.viewInsets.bottom
-                      : mediaQuery.padding.bottom) +
-                  28;
+                  ? mediaQuery.viewInsets.bottom
+                  : mediaQuery.padding.bottom) +
+              28;
 
           return SafeArea(
             top: false,
@@ -200,8 +197,9 @@ class CREDBottomSheet {
               child: Container(
                 decoration: BoxDecoration(
                   color: cs.surfaceContainerHigh,
-                  borderRadius:
-                      const BorderRadius.vertical(top: Radius.circular(32)),
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(32),
+                  ),
                   border: Border(
                     top: BorderSide(
                       color: cs.outlineVariant.withValues(alpha: 0.3),
@@ -246,9 +244,7 @@ class CREDBottomSheet {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      Expanded(
-                        child: builder(ctx, setModalState),
-                      ),
+                      Expanded(child: builder(ctx, setModalState)),
                     ],
                   ),
                 ),
@@ -279,10 +275,7 @@ Widget credTextField(
           fontSize: 15,
           fontWeight: FontWeight.w500,
         ),
-        decoration: InputDecoration(
-          labelText: label,
-          hintText: hint,
-        ),
+        decoration: InputDecoration(labelText: label, hintText: hint),
       );
     },
   );

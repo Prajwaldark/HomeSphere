@@ -146,6 +146,7 @@ button {
   justify-content: center;
   font-weight: 700;
   color: #000;
+  object-fit: cover;
 }
 
 .user-info .name {

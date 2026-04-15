@@ -91,35 +91,37 @@ class _LoginScreenState extends State<LoginScreen>
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 28),
             child: FadeTransition(
               opacity: _fadeIn,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Brand icon
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: AppTheme.primaryGradient(context),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: AppTheme.primaryGlow(context),
-                    ),
-                    child: Icon(
-                      Icons.home_rounded,
-                      size: 32,
-                      color: cs.onPrimary,
+                  const SizedBox(height: 40),
+                  Center(
+                    child: Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.primaryGradient(context),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: AppTheme.primaryGlow(context),
+                      ),
+                      child: const Icon(
+                        Icons.home_rounded,
+                        size: 36,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 40),
+                  const SizedBox(height: 36),
                   Text(
                     'Welcome\nback.',
                     style: TextStyle(
-                      fontSize: 40,
+                      fontSize: 42,
                       fontWeight: FontWeight.w800,
                       color: cs.onSurface,
-                      letterSpacing: -2,
+                      letterSpacing: -1.5,
                       height: 1.1,
                     ),
                   ),
@@ -127,13 +129,13 @@ class _LoginScreenState extends State<LoginScreen>
                   Text(
                     'Sign in to continue',
                     style: TextStyle(
-                      fontSize: 15,
+                      fontSize: 16,
                       color: cs.onSurfaceVariant.withValues(alpha: 0.6),
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
-                  const SizedBox(height: 48),
+                  const SizedBox(height: 40),
 
-                  // Form
                   Form(
                     key: _formKey,
                     child: Column(
@@ -144,7 +146,8 @@ class _LoginScreenState extends State<LoginScreen>
                           icon: Icons.email_outlined,
                           keyboardType: TextInputType.emailAddress,
                           validator: (v) {
-                            if (v == null || v.isEmpty) return 'Enter your email';
+                            if (v == null || v.isEmpty)
+                              return 'Enter your email';
                             if (!v.contains('@')) return 'Enter a valid email';
                             return null;
                           },
@@ -153,7 +156,7 @@ class _LoginScreenState extends State<LoginScreen>
                         _buildTextField(
                           controller: _passwordController,
                           label: 'Password',
-                          icon: Icons.lock_outline,
+                          icon: Icons.lock_outline_rounded,
                           obscure: _obscurePassword,
                           suffixIcon: IconButton(
                             icon: Icon(
@@ -168,19 +171,85 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           ),
                           validator: (v) {
-                            if (v == null || v.isEmpty) return 'Enter your password';
+                            if (v == null || v.isEmpty)
+                              return 'Enter your password';
                             return null;
                           },
                         ),
-                        const SizedBox(height: 36),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: () async {
+                              final email = _emailController.text.trim();
+                              if (email.isEmpty || !email.contains('@')) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Enter your email to reset password',
+                                    ),
+                                    backgroundColor: AppTheme.warning,
+                                  ),
+                                );
+                                return;
+                              }
+                              try {
+                                await _authService.sendPasswordResetEmail(
+                                  email,
+                                );
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'Password reset email sent to $email',
+                                      ),
+                                      backgroundColor: AppTheme.success,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error: $e'),
+                                      backgroundColor: AppTheme.danger,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            child: Text(
+                              'Forgot Password?',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: cs.primary,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
 
                         // Sign In Button
-                        SizedBox(
+                        Container(
                           width: double.infinity,
                           height: 56,
+                          decoration: BoxDecoration(
+                            gradient: AppTheme.primaryGradient(context),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: cs.primary.withValues(alpha: 0.3),
+                                blurRadius: 16,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
                           child: FilledButton(
                             onPressed: _isLoading ? null : _handleSignIn,
                             style: FilledButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
@@ -191,7 +260,7 @@ class _LoginScreenState extends State<LoginScreen>
                                     height: 22,
                                     child: CircularProgressIndicator(
                                       strokeWidth: 2.5,
-                                      color: cs.onPrimary,
+                                      color: Colors.white,
                                     ),
                                   )
                                 : const Text(
@@ -200,6 +269,7 @@ class _LoginScreenState extends State<LoginScreen>
                                       fontSize: 15,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 0.5,
+                                      color: Colors.white,
                                     ),
                                   ),
                           ),
@@ -217,11 +287,15 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                             ),
                             Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                              ),
                               child: Text(
                                 'OR',
                                 style: TextStyle(
-                                  color: cs.onSurfaceVariant.withValues(alpha: 0.4),
+                                  color: cs.onSurfaceVariant.withValues(
+                                    alpha: 0.4,
+                                  ),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w600,
                                   letterSpacing: 1.5,
@@ -251,11 +325,12 @@ class _LoginScreenState extends State<LoginScreen>
                               'https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg',
                               height: 20,
                               width: 20,
-                              errorBuilder: (context, error, stackTrace) => Icon(
-                                Icons.g_mobiledata_rounded,
-                                color: cs.onSurface,
-                                size: 28,
-                              ),
+                              errorBuilder: (context, error, stackTrace) =>
+                                  Icon(
+                                    Icons.g_mobiledata_rounded,
+                                    color: cs.onSurface,
+                                    size: 28,
+                                  ),
                             ),
                             label: Text(
                               'Continue with Google',
@@ -282,7 +357,9 @@ class _LoginScreenState extends State<LoginScreen>
                           Text(
                             'Google sign-in is unavailable on this platform. Use Android, iOS, macOS, or web.',
                             style: TextStyle(
-                              color: cs.onSurfaceVariant.withValues(alpha: 0.65),
+                              color: cs.onSurfaceVariant.withValues(
+                                alpha: 0.65,
+                              ),
                               fontSize: 12,
                             ),
                           ),

@@ -75,9 +75,7 @@ class AuthGate extends StatelessWidget {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(color: cs.primary),
-            ),
+            body: Center(child: CircularProgressIndicator(color: cs.primary)),
           );
         }
         if (snapshot.hasData) {
@@ -98,8 +96,9 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  String? _cachedInitials;
 
-  final List<String> _titles = [
+  final List<String> _titles = <String>[
     'Home',
     'Subscriptions',
     'Appliances',
@@ -107,7 +106,7 @@ class _MainNavigationState extends State<MainNavigation> {
     'Services',
   ];
 
-  final List<Widget> _screens = [
+  static final List<Widget> _screens = <Widget>[
     const DashboardScreen(),
     const SubscriptionsScreen(),
     const AppliancesScreen(),
@@ -115,7 +114,7 @@ class _MainNavigationState extends State<MainNavigation> {
     const ServicesScreen(),
   ];
 
-  final List<IconData> _icons = [
+  static final List<IconData> _icons = <IconData>[
     Icons.grid_view_rounded,
     Icons.receipt_long_rounded,
     Icons.devices_rounded,
@@ -124,6 +123,11 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   String _getUserInitials() {
+    _cachedInitials ??= _computeInitials();
+    return _cachedInitials!;
+  }
+
+  String _computeInitials() {
     final user = FirebaseAuth.instance.currentUser;
     final displayName = user?.displayName?.trim();
     if (displayName != null && displayName.isNotEmpty) {
@@ -155,52 +159,29 @@ class _MainNavigationState extends State<MainNavigation> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(_titles[_currentIndex]),
-        actions: [
-          // Notification icon
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: cs.surfaceContainerHigh,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(
-                color: cs.outlineVariant.withValues(alpha: 0.3),
-              ),
-            ),
-            child: Icon(
-              Icons.notifications_none_rounded,
-              color: cs.onSurfaceVariant,
-              size: 20,
-            ),
+        title: Text(
+          _titles[_currentIndex],
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5,
           ),
-          // Avatar
+        ),
+        actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 20),
-            child: GestureDetector(
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              ),
-              child: Container(
-                padding: const EdgeInsets.all(2),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppTheme.primaryGradient(context),
+            padding: const EdgeInsets.only(right: 16),
+            child: Row(
+              children: [
+                _buildIconBtn(icon: Icons.search_rounded, onTap: () {}),
+                const SizedBox(width: 8),
+                _buildIconBtn(
+                  icon: Icons.notifications_none_rounded,
+                  onTap: () {},
+                  hasDot: true,
                 ),
-                child: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: cs.surfaceContainerHigh,
-                  child: Text(
-                    _getUserInitials(),
-                    style: TextStyle(
-                      color: cs.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                ),
-              ),
+                const SizedBox(width: 12),
+                _buildAvatar(),
+              ],
             ),
           ),
         ],
@@ -213,15 +194,97 @@ class _MainNavigationState extends State<MainNavigation> {
     );
   }
 
+  Widget _buildIconBtn({
+    required IconData icon,
+    required VoidCallback onTap,
+    bool hasDot = false,
+  }) {
+    return Builder(
+      builder: (context) {
+        final cs = Theme.of(context).colorScheme;
+        return Stack(
+          children: [
+            GestureDetector(
+              onTap: onTap,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHigh,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: cs.outlineVariant.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Icon(icon, color: cs.onSurfaceVariant, size: 22),
+              ),
+            ),
+            if (hasDot)
+              Positioned(
+                right: 8,
+                top: 8,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: cs.error,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: cs.surface, width: 1.5),
+                  ),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildAvatar() {
+    return Builder(
+      builder: (context) {
+        final cs = Theme.of(context).colorScheme;
+        return GestureDetector(
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SettingsScreen()),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(3),
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: AppTheme.primaryGradient(context),
+              boxShadow: [
+                BoxShadow(
+                  color: cs.primary.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  spreadRadius: 0,
+                ),
+              ],
+            ),
+            child: CircleAvatar(
+              radius: 17,
+              backgroundColor: cs.surface,
+              child: Text(
+                _getUserInitials(),
+                style: TextStyle(
+                  color: cs.primary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildNavBar(ColorScheme cs) {
     return Container(
       padding: const EdgeInsets.only(top: 12, bottom: 24, left: 16, right: 16),
       decoration: BoxDecoration(
         color: cs.surface,
         border: Border(
-          top: BorderSide(
-            color: cs.outlineVariant.withValues(alpha: 0.2),
-          ),
+          top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.2)),
         ),
       ),
       child: Row(

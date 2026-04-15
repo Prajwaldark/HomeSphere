@@ -5,6 +5,7 @@ import '../services/notification_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/stat_card.dart';
 import 'policy_screen.dart';
+import 'login_screen.dart';
 import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -40,7 +41,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   String _getInitials() {
     final name = _getDisplayName().trim();
-    final parts = name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    final parts = name
+        .split(RegExp(r'\s+'))
+        .where((p) => p.isNotEmpty)
+        .toList();
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
@@ -190,7 +194,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.08),
+                color: Theme.of(
+                  ctx,
+                ).colorScheme.primary.withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
@@ -367,6 +373,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             onPressed: () async {
               Navigator.pop(ctx);
               await _authService.signOut();
+              if (mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                  (route) => false,
+                );
+              }
             },
             child: Text(
               'Sign Out',
@@ -526,10 +538,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ? Icons.verified_rounded
                     : Icons.error_outline_rounded,
                 size: 16,
-                color:
-                    _user?.emailVerified == true
-                        ? AppTheme.success
-                        : AppTheme.warning,
+                color: _user?.emailVerified == true
+                    ? AppTheme.success
+                    : AppTheme.warning,
               ),
             ),
             const SizedBox(height: 32),
@@ -558,54 +569,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: isDark ? Icons.dark_mode_rounded : Icons.light_mode_rounded,
               title: 'Appearance',
               subtitle: isDark ? 'Dark mode' : 'Light mode',
-              trailing: GestureDetector(
-                onTap: () => themeProvider.toggleTheme(),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 64,
-                  height: 32,
-                  padding: const EdgeInsets.all(3),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    color: isDark
-                        ? cs.surfaceContainerHighest
-                        : cs.primaryContainer,
-                    border: Border.all(
-                      color: isDark
-                          ? cs.outlineVariant.withValues(alpha: 0.3)
-                          : Colors.transparent,
-                    ),
-                  ),
-                  child: AnimatedAlign(
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                    alignment: isDark
-                        ? Alignment.centerLeft
-                        : Alignment.centerRight,
-                    child: Container(
-                      width: 26,
-                      height: 26,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isDark ? cs.primary : cs.onPrimaryContainer,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.15),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        isDark
-                            ? Icons.nightlight_round
-                            : Icons.wb_sunny_rounded,
-                        size: 14,
-                        color: isDark ? cs.onPrimary : cs.primaryContainer,
-                      ),
-                    ),
-                  ),
-                ),
+              trailing: Switch(
+                value: isDark,
+                onChanged: (v) => themeProvider.toggleTheme(),
               ),
             ),
             const SizedBox(height: 32),

@@ -28,13 +28,7 @@ const Sidebar = ({ activeTab, setActiveTab }) => {
         ))}
       </nav>
       <div className="sidebar-footer">
-        <div className="user-profile">
-          <div className="avatar">PN</div>
-          <div className="user-info">
-            <p className="name">Prajwal N</p>
-            <p className="status">Pro Account</p>
-          </div>
-        </div>
+        <UserProfile />
       </div>
     </aside>
   );
@@ -178,6 +172,28 @@ const Vehicles = () => {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+};
+
+const UserProfile = () => {
+  const user = {
+    name: 'Prajwal N',
+    status: 'Pro Account',
+    googleImage: null
+  };
+
+  return (
+    <div className="user-profile">
+      {user.googleImage ? (
+        <img src={user.googleImage} alt="Profile" className="avatar" style={{ objectFit: 'cover' }} />
+      ) : (
+        <div className="avatar">PN</div>
+      )}
+      <div className="user-info">
+        <p className="name">{user.name}</p>
+        <p className="status">{user.status}</p>
       </div>
     </div>
   );

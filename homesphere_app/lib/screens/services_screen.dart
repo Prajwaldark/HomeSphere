@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import '../theme/app_theme.dart';
 import '../models/models.dart';
 import '../widgets/stat_card.dart';
 import '../services/firestore_service.dart';
+import '../services/nearby_service_discovery.dart';
 
 class ServicesScreen extends StatefulWidget {
   const ServicesScreen({super.key});
@@ -13,7 +15,14 @@ class ServicesScreen extends StatefulWidget {
 
 class _ServicesScreenState extends State<ServicesScreen> {
   final _firestoreService = FirestoreService();
+  final _nearbyDiscovery = NearbyServiceDiscovery();
   String _selectedCategory = 'All';
+  bool _isLoadingNearby = false;
+  String? _nearbyMessage;
+  String? _nearbyError;
+  String? _nearbyLocationLabel;
+  DateTime? _lastNearbyRefresh;
+  List<ServiceProvider> _nearbyProviders = [];
 
   Color _getCategoryColor(String category, ColorScheme cs) {
     switch (category) {
@@ -111,6 +120,76 @@ class _ServicesScreenState extends State<ServicesScreen> {
     );
   }
 
+  Future<void> _refreshNearbyProviders() async {
+    if (_isLoadingNearby) return;
+
+    setState(() {
+      _isLoadingNearby = true;
+      _nearbyError = null;
+      _nearbyMessage = 'Finding nearby providers within 15 km...';
+    });
+
+    try {
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        throw Exception(
+          'Location services are turned off. Please enable GPS and try again.',
+        );
+      }
+
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+
+      if (permission == LocationPermission.denied) {
+        throw Exception('Location permission was denied.');
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        throw Exception(
+          'Location permission is permanently denied. Open app settings and allow location access.',
+        );
+      }
+
+      final position = await Geolocator.getCurrentPosition(
+        locationSettings:
+            const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+
+      final result = await _nearbyDiscovery.fetchNearbyProviders(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        category: _selectedCategory,
+        radiusKm: 15,
+      );
+
+      if (!mounted) return;
+
+      setState(() {
+        _nearbyProviders = result.providers;
+        _nearbyMessage = result.message;
+        _nearbyLocationLabel =
+            'Lat ${position.latitude.toStringAsFixed(4)}, Lng ${position.longitude.toStringAsFixed(4)}';
+        _lastNearbyRefresh = DateTime.now();
+        _isLoadingNearby = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _nearbyProviders = [];
+        _nearbyError = e.toString().replaceFirst('Exception: ', '');
+        _isLoadingNearby = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(_nearbyError!),
+          backgroundColor: AppTheme.danger,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -141,6 +220,242 @@ class _ServicesScreenState extends State<ServicesScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: AppTheme.primaryGradient(context),
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: cs.onPrimary.withValues(alpha: 0.12),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Icon(
+                              Icons.my_location_rounded,
+                              color: cs.onPrimary,
+                              size: 22,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Nearby service providers',
+                                  style: TextStyle(
+                                    color: cs.onPrimary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Tap location to refresh businesses and phone numbers within 15 km.',
+                                  style: TextStyle(
+                                    color: cs.onPrimary.withValues(alpha: 0.78),
+                                    fontSize: 12,
+                                    height: 1.3,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton.icon(
+                          onPressed: _isLoadingNearby
+                              ? null
+                              : _refreshNearbyProviders,
+                          style: FilledButton.styleFrom(
+                            backgroundColor: cs.onPrimary,
+                            foregroundColor: cs.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          icon: _isLoadingNearby
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: cs.primary,
+                                  ),
+                                )
+                              : const Icon(Icons.refresh_rounded, size: 18),
+                          label: Text(
+                            _isLoadingNearby
+                                ? 'Refreshing location...'
+                                : 'Use My Location',
+                          ),
+                        ),
+                      ),
+                      if (_nearbyLocationLabel != null ||
+                          _lastNearbyRefresh != null ||
+                          _nearbyMessage != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _nearbyError ??
+                              _nearbyMessage ??
+                              _nearbyLocationLabel ??
+                              '',
+                          style: TextStyle(
+                            color: cs.onPrimary.withValues(alpha: 0.85),
+                            fontSize: 12,
+                            height: 1.35,
+                          ),
+                        ),
+                        if (_lastNearbyRefresh != null) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Last refreshed: ${TimeOfDay.fromDateTime(_lastNearbyRefresh!).format(context)}',
+                            style: TextStyle(
+                              color: cs.onPrimary.withValues(alpha: 0.7),
+                              fontSize: 11,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 20),
+
+                if (_nearbyProviders.isNotEmpty) ...[
+                  SectionHeader(
+                    title: 'Nearby Results',
+                    trailing: _nearbyLocationLabel != null ? '15 km' : null,
+                  ),
+                  if (_nearbyLocationLabel != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Text(
+                        _nearbyLocationLabel!,
+                        style: TextStyle(
+                          color: cs.onSurfaceVariant.withValues(alpha: 0.55),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ..._nearbyProviders.map((provider) {
+                    final color = _getCategoryColor(provider.category, cs);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: GlassCard(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        provider.name,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                          color: cs.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        provider.location,
+                                        style: TextStyle(
+                                          color: cs.onSurfaceVariant
+                                              .withValues(alpha: 0.55),
+                                          fontSize: 12,
+                                          height: 1.3,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    StatusBadge(
+                                      text: provider.category,
+                                      color: color,
+                                    ),
+                                    if (provider.distanceKm != null) ...[
+                                      const SizedBox(height: 6),
+                                      Text(
+                                        '${provider.distanceKm!.toStringAsFixed(1)} km away',
+                                        style: TextStyle(
+                                          color: cs.onSurfaceVariant
+                                              .withValues(alpha: 0.5),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ],
+                                  ],
+                                ),
+                              ],
+                            ),
+                            if (provider.phone.isNotEmpty) ...[
+                              const SizedBox(height: 14),
+                              Container(
+                                height: 1,
+                                color:
+                                    cs.outlineVariant.withValues(alpha: 0.2),
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.phone_rounded,
+                                    size: 14,
+                                    color: cs.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    provider.phone,
+                                    style: TextStyle(
+                                      color: cs.primary,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 20),
+                ],
+
+                if (_nearbyProviders.isEmpty && _nearbyMessage != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: Text(
+                      _nearbyMessage!,
+                      style: TextStyle(
+                        color: cs.onSurfaceVariant.withValues(alpha: 0.55),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+
                 // Category chips
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -158,8 +473,15 @@ class _ServicesScreenState extends State<ServicesScreen> {
                         child: FilterChip(
                           label: Text(cat),
                           selected: isSelected,
-                          onSelected: (_) =>
-                              setState(() => _selectedCategory = cat),
+                          onSelected: (_) => setState(() {
+                            _selectedCategory = cat;
+                            if (_nearbyProviders.isNotEmpty) {
+                              _nearbyProviders = [];
+                              _nearbyLocationLabel = null;
+                              _nearbyMessage =
+                                  'Tap Use My Location to refresh $cat providers.';
+                            }
+                          }),
                           selectedColor: cs.primaryContainer,
                           checkmarkColor: cs.onPrimaryContainer,
                           labelStyle: TextStyle(
