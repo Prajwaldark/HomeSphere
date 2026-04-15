@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../theme/app_theme.dart';
 import '../services/auth_service.dart';
+import 'policy_screen.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -13,6 +14,7 @@ class SignupScreen extends StatefulWidget {
 class _SignupScreenState extends State<SignupScreen>
     with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -20,6 +22,7 @@ class _SignupScreenState extends State<SignupScreen>
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _agreedToPolicies = false;
   late AnimationController _animController;
   late Animation<double> _fadeIn;
 
@@ -36,6 +39,7 @@ class _SignupScreenState extends State<SignupScreen>
 
   @override
   void dispose() {
+    _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -51,6 +55,7 @@ class _SignupScreenState extends State<SignupScreen>
       await _authService.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        displayName: _nameController.text.trim(),
       );
       if (mounted) Navigator.pop(context);
     } on FirebaseAuthException catch (e) {
@@ -144,6 +149,66 @@ class _SignupScreenState extends State<SignupScreen>
                     child: Column(
                       children: [
                         _buildTextField(
+                          controller: _nameController,
+                          label: 'Name',
+                          icon: Icons.person_outline_rounded,
+                          validator: (v) {
+                            if (v == null || v.trim().isEmpty) {
+                              return 'Enter your name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        _buildConsentButton(
+                          isAgreed: _agreedToPolicies,
+                          onPressed: () {
+                            setState(() {
+                              _agreedToPolicies = !_agreedToPolicies;
+                            });
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          spacing: 12,
+                          runSpacing: 4,
+                          children: [
+                            TextButton(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PolicyScreen(
+                                    type: PolicyType.terms,
+                                  ),
+                                ),
+                              ),
+                              child: const Text('View Terms'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const PolicyScreen(
+                                    type: PolicyType.privacy,
+                                  ),
+                                ),
+                              ),
+                              child: const Text('View Privacy'),
+                            ),
+                          ],
+                        ),
+                        Text(
+                          'You need to agree to the ToS and Privacy Policy before creating an account.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: cs.onSurfaceVariant.withValues(alpha: 0.55),
+                            fontSize: 12,
+                            height: 1.4,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _buildTextField(
                           controller: _emailController,
                           label: 'Email',
                           icon: Icons.email_outlined,
@@ -213,7 +278,10 @@ class _SignupScreenState extends State<SignupScreen>
                           width: double.infinity,
                           height: 56,
                           child: FilledButton(
-                            onPressed: _isLoading ? null : _handleSignUp,
+                            onPressed:
+                                _isLoading || !_agreedToPolicies
+                                    ? null
+                                    : _handleSignUp,
                             style: FilledButton.styleFrom(
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
@@ -356,6 +424,44 @@ class _SignupScreenState extends State<SignupScreen>
                 ],
               ),
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConsentButton({
+    required bool isAgreed,
+    required VoidCallback onPressed,
+  }) {
+    final cs = Theme.of(context).colorScheme;
+
+    return SizedBox(
+      width: double.infinity,
+      height: 52,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(
+          isAgreed ? Icons.verified_rounded : Icons.verified_outlined,
+          size: 18,
+        ),
+        label: Text(
+          isAgreed
+              ? 'Agreed to ToS & Privacy Policy'
+              : 'Agree to ToS & Privacy Policy',
+        ),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: isAgreed ? cs.primary : cs.onSurface,
+          side: BorderSide(
+            color: isAgreed
+                ? cs.primary.withValues(alpha: 0.35)
+                : cs.outlineVariant.withValues(alpha: 0.4),
+          ),
+          backgroundColor: isAgreed
+              ? cs.primary.withValues(alpha: 0.08)
+              : cs.surfaceContainerHigh,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),

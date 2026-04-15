@@ -606,9 +606,6 @@ class _ApplianceFormSeed {
     this.brand = '',
     this.category = 'Other',
     this.model = '',
-    this.purchaseDate = '',
-    this.warrantyExpiry = '',
-    this.status = 'Healthy',
   });
 
   factory _ApplianceFormSeed.fromDetected(DetectedApplianceDetails detected) {
@@ -624,9 +621,10 @@ class _ApplianceFormSeed {
   final String brand;
   final String category;
   final String model;
-  final String purchaseDate;
-  final String warrantyExpiry;
-  final String status;
+
+  String get purchaseDate => '';
+  String get warrantyExpiry => '';
+  String get status => 'Healthy';
 }
 
 class _CapturedAppliancePreview extends StatelessWidget {

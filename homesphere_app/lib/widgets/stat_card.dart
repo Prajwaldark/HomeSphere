@@ -181,56 +181,81 @@ class CREDBottomSheet {
     return showModalBottomSheet<T>(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setModalState) => Container(
-          decoration: BoxDecoration(
-            color: cs.surfaceContainerHigh,
-            borderRadius:
-                const BorderRadius.vertical(top: Radius.circular(32)),
-            border: Border(
-              top: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
-              left: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
-              right: BorderSide(color: cs.outlineVariant.withValues(alpha: 0.3)),
-            ),
-          ),
-          child: Padding(
-            padding: EdgeInsets.only(
-              left: 28,
-              right: 28,
-              top: 16,
-              bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: cs.outline.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(2),
+        builder: (ctx, setModalState) {
+          final mediaQuery = MediaQuery.of(ctx);
+          final maxSheetHeight = mediaQuery.size.height * 0.9;
+          final bottomPadding =
+              (mediaQuery.viewInsets.bottom > 0
+                      ? mediaQuery.viewInsets.bottom
+                      : mediaQuery.padding.bottom) +
+                  28;
+
+          return SafeArea(
+            top: false,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxSheetHeight),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: cs.surfaceContainerHigh,
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(32)),
+                  border: Border(
+                    top: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.3),
+                    ),
+                    left: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.3),
+                    ),
+                    right: BorderSide(
+                      color: cs.outlineVariant.withValues(alpha: 0.3),
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.w800,
-                    color: cs.onSurface,
-                    letterSpacing: -0.5,
+                child: Padding(
+                  padding: EdgeInsets.only(
+                    left: 28,
+                    right: 28,
+                    top: 16,
+                    bottom: bottomPadding,
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.max,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            color: cs.outline.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.w800,
+                          color: cs.onSurface,
+                          letterSpacing: -0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      Expanded(
+                        child: builder(ctx, setModalState),
+                      ),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 24),
-                builder(ctx, setModalState),
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

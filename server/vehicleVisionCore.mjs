@@ -1,19 +1,4 @@
-export const CATEGORY_OPTIONS = [
-  'Fan',
-  'Refrigerator',
-  'TV',
-  'Washing Machine',
-  'Air Conditioner',
-  'Microwave',
-  'Water Purifier',
-  'Geyser',
-  'Vacuum Cleaner',
-  'Dishwasher',
-  'Air Purifier',
-  'Other',
-];
-
-export async function detectAppliance({
+export async function detectVehicle({
   imageBase64,
   mimeType,
   geminiApiKey,
@@ -25,21 +10,20 @@ export async function detectAppliance({
     throw new Error('GEMINI_API_KEY is missing on the backend.');
   }
 
-  const prompt = `You are an assistant that analyzes photographs of appliances and devices to help users fill an appliance registration form.  
-You will receive a compressed, lower‑resolution photo of a device taken with a mobile camera.
+  const prompt = `You are an assistant that analyzes photographs of vehicles (cars, bikes, scooters, etc.) to help users fill a vehicle registration form.
+You will receive a compressed, lower-resolution photo of a vehicle taken with a mobile camera.
 
 Your task is to:
-1. Identify the appliance/device type (e.g., AC, fridge, TV, inverter, UPS, geyser, etc.).
-2. Read any visible brand name, model number, serial number, or product label.
-3. Describe key visible features (ports, connectors, power rating, voltage, etc.) if present.
+1. Identify the vehicle type (e.g., Car, Motorcycle, Scooter).
+2. Read any visible brand name, model name, and registration number (license plate).
+3. Describe key visible features if present.
 
-Respond **only** in the following strict JSON‑like text format (no extra text, no markdown):
+Respond **only** in the following strict JSON-like text format (no extra text, no markdown):
 
-Device type: <one line>
+Vehicle type: <one line>
 Brand: <brand if visible, else "not clearly visible">
 Model: <model if visible, else "not clearly visible">
-Serial number: <serial if visible, else "not clearly visible">
-Power rating / voltage: <e.g., 230V 50Hz, 1.5HP, etc. if any text is visible>
+Registration number: <registration number if visible, else "not clearly visible">
 Other visible labels: 
   - <label line 1>
   - <label line 2>
@@ -61,7 +45,7 @@ Do not change the structure or add any extra explanation.`;
         systemInstruction: {
           parts: [
             {
-              text: 'You identify home appliances from photos and return concise structured text.',
+              text: 'You identify vehicles from photos and return concise structured text.',
             },
           ],
         },
@@ -96,43 +80,32 @@ Do not change the structure or add any extra explanation.`;
   }
 
   const content = extractGeminiText(responseBody);
-  const parsed = parseApplianceText(content);
+  const parsed = parseVehicleText(content);
 
-  const category = normalizeCategory(parsed.deviceType);
   const brand = cleanValue(parsed.brand);
   const model = cleanValue(parsed.model);
-  const name = buildName({
-    suggestedName: parsed.deviceType,
-    brand,
-    category,
-    model,
-  });
+  const name = [brand, model].filter(Boolean).join(' ').trim() || parsed.vehicleType;
 
   return {
     name,
     brand,
-    category,
     model,
-    serialNumber: parsed.serialNumber,
-    powerRating: parsed.powerRating,
+    regNumber: parsed.regNumber,
     otherLabels: parsed.otherLabels,
     notes: parsed.notes,
     message: [
-      parsed.serialNumber ? `Serial: ${parsed.serialNumber}` : '',
-      parsed.powerRating ? `Power: ${parsed.powerRating}` : '',
       parsed.otherLabels.length ? `Labels: ${parsed.otherLabels.join(', ')}` : '',
       parsed.notes ? `Notes: ${parsed.notes}` : ''
     ].filter(Boolean).join('\n') || undefined,
   };
 }
 
-export function parseApplianceText(text) {
+export function parseVehicleText(text) {
   const result = {
-    deviceType: '',
+    vehicleType: '',
     brand: '',
     model: '',
-    serialNumber: '',
-    powerRating: '',
+    regNumber: '',
     otherLabels: [],
     notes: ''
   };
@@ -142,8 +115,8 @@ export function parseApplianceText(text) {
 
   for (let line of lines) {
     let trimmed = line.trim();
-    if (trimmed.startsWith('Device type:')) {
-      result.deviceType = trimmed.substring('Device type:'.length).trim();
+    if (trimmed.startsWith('Vehicle type:')) {
+      result.vehicleType = trimmed.substring('Vehicle type:'.length).trim();
       currentKey = null;
     } else if (trimmed.startsWith('Brand:')) {
       result.brand = trimmed.substring('Brand:'.length).trim();
@@ -151,11 +124,8 @@ export function parseApplianceText(text) {
     } else if (trimmed.startsWith('Model:')) {
       result.model = trimmed.substring('Model:'.length).trim();
       currentKey = null;
-    } else if (trimmed.startsWith('Serial number:')) {
-      result.serialNumber = trimmed.substring('Serial number:'.length).trim();
-      currentKey = null;
-    } else if (trimmed.startsWith('Power rating / voltage:')) {
-      result.powerRating = trimmed.substring('Power rating / voltage:'.length).trim();
+    } else if (trimmed.startsWith('Registration number:')) {
+      result.regNumber = trimmed.substring('Registration number:'.length).trim();
       currentKey = null;
     } else if (trimmed.startsWith('Other visible labels:')) {
       currentKey = 'otherLabels';
@@ -174,8 +144,7 @@ export function parseApplianceText(text) {
   const clean = (val) => val.toLowerCase().includes('not clearly visible') ? '' : val;
   result.brand = clean(result.brand);
   result.model = clean(result.model);
-  result.serialNumber = clean(result.serialNumber);
-  result.powerRating = clean(result.powerRating);
+  result.regNumber = clean(result.regNumber);
 
   return result;
 }
@@ -206,27 +175,6 @@ export function extractGeminiText(body) {
   return text;
 }
 
-export function normalizeCategory(value) {
-  const normalized = value.trim().toLowerCase();
-  if (!normalized) {
-    return 'Other';
-  }
-
-  for (const option of CATEGORY_OPTIONS) {
-    if (option.toLowerCase() === normalized) {
-      return option;
-    }
-  }
-
-  for (const option of CATEGORY_OPTIONS) {
-    if (normalized.includes(option.toLowerCase())) {
-      return option;
-    }
-  }
-
-  return 'Other';
-}
-
 export function cleanValue(value) {
   const cleaned = String(value || '').trim();
   if (!cleaned) {
@@ -239,11 +187,4 @@ export function cleanValue(value) {
   }
 
   return cleaned;
-}
-
-export function buildName({ suggestedName, brand, category, model }) {
-  return [brand, category !== 'Other' ? category : suggestedName, model]
-      .filter(Boolean)
-      .join(' ')
-      .trim();
 }

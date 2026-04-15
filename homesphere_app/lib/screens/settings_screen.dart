@@ -4,6 +4,7 @@ import '../theme/app_theme.dart';
 import '../services/notification_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/stat_card.dart';
+import 'policy_screen.dart';
 import '../main.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -15,31 +16,38 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _authService = AuthService();
-  final _user = FirebaseAuth.instance.currentUser;
   bool _notificationsEnabled = true;
 
+  User? get _user => _authService.currentUser;
+
   String _getDisplayName() {
-    if (_user == null) return 'User';
-    if (_user.displayName != null && _user.displayName!.isNotEmpty) {
-      return _user.displayName!;
+    final user = _user;
+    if (user == null) return 'User';
+    if (user.displayName != null && user.displayName!.isNotEmpty) {
+      return user.displayName!;
     }
-    final email = _user.email ?? '';
+    final email = user.email ?? '';
     final name = email.split('@').first;
     if (name.isEmpty) return 'User';
     return name
         .replaceAll(RegExp(r'[._]'), ' ')
         .split(' ')
-        .map((w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '')
+        .map(
+          (w) => w.isNotEmpty ? '${w[0].toUpperCase()}${w.substring(1)}' : '',
+        )
         .join(' ');
   }
 
   String _getInitials() {
-    final name = _getDisplayName();
-    final parts = name.split(' ');
+    final name = _getDisplayName().trim();
+    final parts = name.split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
     if (parts.length >= 2) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
-    return name.isNotEmpty ? name[0].toUpperCase() : '?';
+    if (parts.isNotEmpty) {
+      return parts[0][0].toUpperCase();
+    }
+    return '?';
   }
 
   void _showEditNameDialog() {
@@ -87,14 +95,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showChangePasswordDialog() {
+  // ignore: unused_element
+  void _showLegacyChangePasswordDialog() {
     final currentPassCtrl = TextEditingController();
     final newPassCtrl = TextEditingController();
     final confirmPassCtrl = TextEditingController();
+    final hasPasswordProvider = _authService.currentUserHasPasswordProvider;
 
     CREDBottomSheet.show(
       context: context,
-      title: 'Change Password',
+      title: hasPasswordProvider ? 'Change Password' : 'Create Password',
       builder: (ctx, setModalState) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -110,7 +120,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               if (newPassCtrl.text.isEmpty || newPassCtrl.text.length < 6) {
                 ScaffoldMessenger.of(ctx).showSnackBar(
                   SnackBar(
-                    content: const Text('Password must be at least 6 characters'),
+                    content: const Text(
+                      'Password must be at least 6 characters',
+                    ),
                     backgroundColor: AppTheme.danger,
                   ),
                 );
@@ -130,8 +142,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   email: _user!.email!,
                   password: currentPassCtrl.text,
                 );
-                await _user.reauthenticateWithCredential(cred);
-                await _user.updatePassword(newPassCtrl.text);
+                await _user!.reauthenticateWithCredential(cred);
+                await _user!.updatePassword(newPassCtrl.text);
                 if (ctx.mounted) Navigator.pop(ctx);
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -148,6 +160,133 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       content: Text(
                         'Error: ${e.toString().contains('wrong-password') ? 'Current password is incorrect' : e}',
                       ),
+                      backgroundColor: AppTheme.danger,
+                    ),
+                  );
+                }
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showChangePasswordDialog() {
+    final currentPassCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+    final hasPasswordProvider = _authService.currentUserHasPasswordProvider;
+    final email = _authService.currentUserEmail;
+
+    CREDBottomSheet.show(
+      context: context,
+      title: hasPasswordProvider ? 'Change Password' : 'Create Password',
+      builder: (ctx, setModalState) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (!hasPasswordProvider) ...[
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                email == null || email.isEmpty
+                    ? 'Create a password to enable email sign-in for this account.'
+                    : 'Create a password for $email so you can sign in with email and password.',
+                style: TextStyle(
+                  color: Theme.of(ctx).colorScheme.onSurface,
+                  fontWeight: FontWeight.w500,
+                  height: 1.4,
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+          ],
+          if (hasPasswordProvider) ...[
+            credTextField(currentPassCtrl, 'Current Password', '........'),
+            const SizedBox(height: 14),
+          ],
+          credTextField(newPassCtrl, 'New Password', '........'),
+          const SizedBox(height: 14),
+          credTextField(confirmPassCtrl, 'Confirm New Password', '........'),
+          const SizedBox(height: 24),
+          credButton(
+            label: hasPasswordProvider ? 'Update Password' : 'Create Password',
+            onPressed: () async {
+              if (hasPasswordProvider && currentPassCtrl.text.trim().isEmpty) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(
+                    content: const Text('Enter your current password'),
+                    backgroundColor: AppTheme.danger,
+                  ),
+                );
+                return;
+              }
+
+              if (newPassCtrl.text.isEmpty || newPassCtrl.text.length < 6) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(
+                    content: const Text(
+                      'Password must be at least 6 characters',
+                    ),
+                    backgroundColor: AppTheme.danger,
+                  ),
+                );
+                return;
+              }
+
+              if (newPassCtrl.text != confirmPassCtrl.text) {
+                ScaffoldMessenger.of(ctx).showSnackBar(
+                  SnackBar(
+                    content: const Text('Passwords do not match'),
+                    backgroundColor: AppTheme.danger,
+                  ),
+                );
+                return;
+              }
+
+              try {
+                await _authService.setOrUpdatePassword(
+                  newPassword: newPassCtrl.text,
+                  currentPassword: hasPasswordProvider
+                      ? currentPassCtrl.text
+                      : null,
+                );
+
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                }
+
+                if (!mounted) return;
+                setState(() {});
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      hasPasswordProvider
+                          ? 'Password updated successfully'
+                          : 'Password created. You can now sign in with your email and password.',
+                    ),
+                    backgroundColor: AppTheme.success,
+                  ),
+                );
+              } on AuthFailure catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(
+                      content: Text(e.message),
+                      backgroundColor: AppTheme.danger,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (ctx.mounted) {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    SnackBar(
+                      content: Text('Error: $e'),
                       backgroundColor: AppTheme.danger,
                     ),
                   );
@@ -187,7 +326,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Error: $e. Please sign in again and retry.'),
+                      content: Text(
+                        'Error: $e. Please sign in again and retry.',
+                      ),
                       backgroundColor: AppTheme.danger,
                     ),
                   );
@@ -316,12 +457,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 6),
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 4,
+                    ),
                     decoration: BoxDecoration(
-                      color: (_user?.emailVerified == true
-                              ? AppTheme.success
-                              : AppTheme.warning)
-                          .withValues(alpha: 0.1),
+                      color:
+                          (_user?.emailVerified == true
+                                  ? AppTheme.success
+                                  : AppTheme.warning)
+                              .withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -344,7 +489,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       label: const Text('Edit Name'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: cs.primary,
-                        side: BorderSide(color: cs.primary.withValues(alpha: 0.3)),
+                        side: BorderSide(
+                          color: cs.primary.withValues(alpha: 0.3),
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14),
                         ),
@@ -361,8 +508,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const SectionHeader(title: 'Account'),
             _buildSettingsTile(
               icon: Icons.lock_outline_rounded,
-              title: 'Change Password',
-              subtitle: 'Update your account password',
+              title: _authService.currentUserHasPasswordProvider
+                  ? 'Change Password'
+                  : 'Create Password',
+              subtitle: _authService.currentUserHasPasswordProvider
+                  ? 'Update your account password'
+                  : 'Set a password for email sign-in',
               onTap: _showChangePasswordDialog,
             ),
             const SizedBox(height: 8),
@@ -370,7 +521,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.email_outlined,
               title: 'Email',
               subtitle: _user?.email ?? 'Not set',
-              trailing: Icon(Icons.verified_rounded, size: 16, color: AppTheme.success),
+              trailing: Icon(
+                _user?.emailVerified == true
+                    ? Icons.verified_rounded
+                    : Icons.error_outline_rounded,
+                size: 16,
+                color:
+                    _user?.emailVerified == true
+                        ? AppTheme.success
+                        : AppTheme.warning,
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -419,8 +579,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: AnimatedAlign(
                     duration: const Duration(milliseconds: 300),
                     curve: Curves.easeInOut,
-                    alignment:
-                        isDark ? Alignment.centerLeft : Alignment.centerRight,
+                    alignment: isDark
+                        ? Alignment.centerLeft
+                        : Alignment.centerRight,
                     child: Container(
                       width: 26,
                       height: 26,
@@ -436,7 +597,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ],
                       ),
                       child: Icon(
-                        isDark ? Icons.nightlight_round : Icons.wb_sunny_rounded,
+                        isDark
+                            ? Icons.nightlight_round
+                            : Icons.wb_sunny_rounded,
                         size: 14,
                         color: isDark ? cs.onPrimary : cs.primaryContainer,
                       ),
@@ -459,14 +622,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: Icons.description_outlined,
               title: 'Terms of Service',
               subtitle: 'Read our terms',
-              onTap: () {},
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PolicyScreen(type: PolicyType.terms),
+                ),
+              ),
             ),
             const SizedBox(height: 8),
             _buildSettingsTile(
               icon: Icons.privacy_tip_outlined,
               title: 'Privacy Policy',
               subtitle: 'How we handle your data',
-              onTap: () {},
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const PolicyScreen(type: PolicyType.privacy),
+                ),
+              ),
             ),
             const SizedBox(height: 32),
 
@@ -514,9 +687,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         decoration: BoxDecoration(
           color: cs.surfaceContainerHigh,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: cs.outlineVariant.withValues(alpha: 0.3),
-          ),
+          border: Border.all(color: cs.outlineVariant.withValues(alpha: 0.3)),
         ),
         child: Row(
           children: [

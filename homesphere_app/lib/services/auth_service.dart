@@ -25,6 +25,14 @@ class AuthService {
   /// The currently signed-in user, or null.
   User? get currentUser => _auth.currentUser;
 
+  String? get currentUserEmail => currentUser?.email;
+
+  bool get currentUserHasPasswordProvider =>
+      currentUser?.providerData.any(
+        (provider) => provider.providerId == EmailAuthProvider.PROVIDER_ID,
+      ) ??
+      false;
+
   /// Stream that emits whenever the auth state changes.
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
@@ -58,11 +66,20 @@ class AuthService {
   Future<UserCredential> signUp({
     required String email,
     required String password,
+    String? displayName,
   }) async {
-    return await _auth.createUserWithEmailAndPassword(
+    final credential = await _auth.createUserWithEmailAndPassword(
       email: email,
       password: password,
     );
+
+    final name = displayName?.trim();
+    if (name != null && name.isNotEmpty) {
+      await credential.user?.updateDisplayName(name);
+      await credential.user?.reload();
+    }
+
+    return credential;
   }
 
   /// Sign in with Google.
@@ -91,6 +108,54 @@ class AuthService {
       throw AuthFailure(_mapGooglePlatformError(e));
     } on FirebaseAuthException catch (e) {
       throw AuthFailure(_mapFirebaseAuthError(e));
+    }
+  }
+
+  Future<void> setOrUpdatePassword({
+    required String newPassword,
+    String? currentPassword,
+  }) async {
+    final user = currentUser;
+    if (user == null) {
+      throw const AuthFailure('No signed-in user found.');
+    }
+
+    final email = user.email?.trim();
+    if (email == null || email.isEmpty) {
+      throw const AuthFailure(
+        'This account does not have an email address for password sign-in.',
+      );
+    }
+
+    final hasPasswordProvider = currentUserHasPasswordProvider;
+
+    try {
+      if (hasPasswordProvider) {
+        if (currentPassword == null || currentPassword.isEmpty) {
+          throw const AuthFailure('Enter your current password.');
+        }
+
+        final credential = EmailAuthProvider.credential(
+          email: email,
+          password: currentPassword,
+        );
+
+        await user.reauthenticateWithCredential(credential);
+        await user.updatePassword(newPassword);
+      } else {
+        final credential = EmailAuthProvider.credential(
+          email: email,
+          password: newPassword,
+        );
+
+        await user.linkWithCredential(credential);
+      }
+
+      await user.reload();
+    } on FirebaseAuthException catch (e) {
+      throw AuthFailure(
+        _mapPasswordError(e, hasPasswordProvider: hasPasswordProvider),
+      );
     }
   }
 
@@ -169,6 +234,38 @@ class AuthService {
         return 'This Firebase user has been disabled.';
       default:
         return error.message ?? 'Firebase sign-in failed.';
+    }
+  }
+
+  String _mapPasswordError(
+    FirebaseAuthException error, {
+    required bool hasPasswordProvider,
+  }) {
+    switch (error.code) {
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Current password is incorrect.';
+      case 'weak-password':
+        return 'Choose a stronger password with at least 6 characters.';
+      case 'requires-recent-login':
+        return 'Please sign in again before updating your password.';
+      case 'provider-already-linked':
+        return 'Password sign-in is already enabled for this account.';
+      case 'email-already-in-use':
+      case 'credential-already-in-use':
+        return 'This email is already linked to another account.';
+      case 'operation-not-allowed':
+        return 'Email/password sign-in is not enabled in Firebase Authentication.';
+      case 'user-mismatch':
+        return 'Re-authentication failed for the current user.';
+      default:
+        if (!hasPasswordProvider &&
+            error.message != null &&
+            error.message!.trim().isNotEmpty) {
+          return error.message!.trim();
+        }
+
+        return error.message ?? 'Unable to update password.';
     }
   }
 }

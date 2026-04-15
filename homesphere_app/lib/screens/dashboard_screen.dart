@@ -18,10 +18,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
   String _getUserName() {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return 'User';
+    final displayName = user.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName;
+    }
+
     final email = user.email ?? '';
-    final name = email.split('@').first;
+    final name = email.split('@').first.trim();
     if (name.isEmpty) return 'User';
-    return name[0].toUpperCase() + name.substring(1);
+    return name
+        .replaceAll(RegExp(r'[._]'), ' ')
+        .split(RegExp(r'\s+'))
+        .where((part) => part.isNotEmpty)
+        .map((part) => part[0].toUpperCase() + part.substring(1))
+        .join(' ');
   }
 
   @override

@@ -125,9 +125,22 @@ class _MainNavigationState extends State<MainNavigation> {
 
   String _getUserInitials() {
     final user = FirebaseAuth.instance.currentUser;
+    final displayName = user?.displayName?.trim();
+    if (displayName != null && displayName.isNotEmpty) {
+      final nameParts = displayName
+          .replaceAll(RegExp(r'[._]'), ' ')
+          .split(RegExp(r'\s+'))
+          .where((part) => part.isNotEmpty)
+          .toList();
+      if (nameParts.length >= 2) {
+        return '${nameParts[0][0]}${nameParts[1][0]}'.toUpperCase();
+      }
+      return nameParts.isNotEmpty ? nameParts.first[0].toUpperCase() : '?';
+    }
+
     if (user == null || user.email == null) return '?';
     final email = user.email!;
-    final parts = email.split('@').first;
+    final parts = email.split('@').first.trim();
     if (parts.isEmpty) return '?';
     final nameParts = parts.split(RegExp(r'[._]'));
     if (nameParts.length >= 2) {

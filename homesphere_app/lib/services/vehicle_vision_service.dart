@@ -4,36 +4,36 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 
-class DetectedApplianceDetails {
-  const DetectedApplianceDetails({
+class DetectedVehicleDetails {
+  const DetectedVehicleDetails({
     required this.name,
     required this.brand,
-    required this.category,
     required this.model,
+    required this.regNumber,
     this.message,
   });
 
-  const DetectedApplianceDetails.empty({this.message})
+  const DetectedVehicleDetails.empty({this.message})
       : name = '',
         brand = '',
-        category = 'Other',
-        model = '';
+        model = '',
+        regNumber = '';
 
   final String name;
   final String brand;
-  final String category;
   final String model;
+  final String regNumber;
   final String? message;
 }
 
-class ApplianceVisionService {
-  ApplianceVisionService({http.Client? client})
+class VehicleVisionService {
+  VehicleVisionService({http.Client? client})
       : _client = client ?? http.Client();
 
   static const String _defaultApiUrl =
-      'https://home-sphere-indol.vercel.app/api/appliance-detect';
+      'https://home-sphere-indol.vercel.app/api/vehicle-detect';
   static const String _configuredApiUrl = String.fromEnvironment(
-    'APPLIANCE_VISION_API_URL',
+    'VEHICLE_VISION_API_URL',
     defaultValue: _defaultApiUrl,
   );
 
@@ -43,12 +43,12 @@ class ApplianceVisionService {
 
   String get _apiUrl => _configuredApiUrl;
 
-  Future<DetectedApplianceDetails> analyzeImage(XFile image) async {
+  Future<DetectedVehicleDetails> analyzeImage(XFile image) async {
     if (!isConfigured) {
       throw Exception(
-        'The appliance analysis backend URL is not configured. '
+        'The vehicle analysis backend URL is not configured. '
         'Deploy the backend and run Flutter with '
-        '--dart-define=APPLIANCE_VISION_API_URL=https://your-domain/api/appliance-detect',
+        '--dart-define=VEHICLE_VISION_API_URL=https://your-domain/api/vehicle-detect',
       );
     }
 
@@ -69,7 +69,7 @@ class ApplianceVisionService {
       );
     } catch (error) {
       throw Exception(
-        'Could not reach the appliance analysis backend at $_apiUrl. '
+        'Could not reach the vehicle analysis backend at $_apiUrl. '
         'Check that the deployed API is online and reachable.\n\n$error',
       );
     }
@@ -78,9 +78,9 @@ class ApplianceVisionService {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       if (response.statusCode == 404) {
         throw Exception(
-          'Appliance detection endpoint was not found at $_apiUrl. '
-          'Make sure api/appliance-detect.mjs is deployed on the backend, '
-          'then redeploy the app with the correct APPLIANCE_VISION_API_URL.',
+          'Vehicle detection endpoint was not found at $_apiUrl. '
+          'Make sure api/vehicle-detect.mjs is deployed on the backend, '
+          'then redeploy the app with the correct VEHICLE_VISION_API_URL.',
         );
       }
 
@@ -90,11 +90,11 @@ class ApplianceVisionService {
       );
     }
 
-    return DetectedApplianceDetails(
+    return DetectedVehicleDetails(
       name: body['name']?.toString() ?? '',
       brand: body['brand']?.toString() ?? '',
-      category: body['category']?.toString() ?? 'Other',
       model: body['model']?.toString() ?? '',
+      regNumber: body['regNumber']?.toString() ?? '',
       message: body['message']?.toString(),
     );
   }
