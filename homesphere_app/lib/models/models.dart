@@ -5,6 +5,7 @@ class Subscription {
   final String nextBilling;
   final String category;
   final bool isActive;
+  final String? upiId;
 
   Subscription({
     this.id,
@@ -13,6 +14,7 @@ class Subscription {
     required this.nextBilling,
     required this.category,
     this.isActive = true,
+    this.upiId,
   });
 
   Map<String, dynamic> toMap() => {
@@ -21,6 +23,7 @@ class Subscription {
     'nextBilling': nextBilling,
     'category': category,
     'isActive': isActive,
+    if (upiId != null) 'upiId': upiId,
   };
 
   factory Subscription.fromMap(Map<String, dynamic> map, String id) {
@@ -31,6 +34,7 @@ class Subscription {
       nextBilling: map['nextBilling'] ?? '',
       category: map['category'] ?? '',
       isActive: map['isActive'] ?? true,
+      upiId: map['upiId'],
     );
   }
 }

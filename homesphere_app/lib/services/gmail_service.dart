@@ -37,56 +37,56 @@ class GmailService {
   // ─── Known services with patterns AND estimated prices ───
   static final List<_ServicePattern> _servicePatterns = [
     // Entertainment
-    _ServicePattern('Netflix', ['netflix'], 'Entertainment', '₹199/mo'),
-    _ServicePattern('Spotify', ['spotify'], 'Entertainment', '₹119/mo'),
-    _ServicePattern('Amazon Prime', ['amazon prime', 'prime video', 'prime membership'], 'Entertainment', '₹1,499/yr'),
-    _ServicePattern('Disney+ Hotstar', ['disney+', 'hotstar', 'disney plus'], 'Entertainment', '₹299/mo'),
-    _ServicePattern('YouTube Premium', ['youtube premium', 'youtube music'], 'Entertainment', '₹149/mo'),
-    _ServicePattern('Apple TV+', ['apple tv'], 'Entertainment', '₹99/mo'),
-    _ServicePattern('JioCinema', ['jiocinema'], 'Entertainment', '₹29/mo'),
-    _ServicePattern('SonyLIV', ['sonyliv'], 'Entertainment', '₹299/mo'),
-    _ServicePattern('ZEE5', ['zee5'], 'Entertainment', '₹99/mo'),
-    _ServicePattern('Crunchyroll', ['crunchyroll'], 'Entertainment', '\$7.99/mo'),
-    _ServicePattern('HBO Max', ['hbo max', 'hbo'], 'Entertainment', '\$15.99/mo'),
-    _ServicePattern('Xbox Game Pass', ['xbox game pass', 'game pass'], 'Entertainment', '₹499/mo'),
-    _ServicePattern('PlayStation Plus', ['playstation plus', 'ps plus'], 'Entertainment', '₹3,499/yr'),
-    _ServicePattern('Nintendo Online', ['nintendo switch online'], 'Entertainment', '₹1,749/yr'),
+    _ServicePattern('Netflix', ['netflix.com'], ['netflix'], 'Entertainment', '₹199/mo'),
+    _ServicePattern('Spotify', ['spotify.com'], ['spotify'], 'Entertainment', '₹119/mo'),
+    _ServicePattern('Amazon Prime', ['amazon.com', 'amazon.in'], ['amazon prime', 'prime video', 'prime membership'], 'Entertainment', '₹1,499/yr'),
+    _ServicePattern('Disney+ Hotstar', ['hotstar.com', 'disney.com', 'hotstar.in'], ['disney+', 'hotstar', 'disney plus'], 'Entertainment', '₹299/mo'),
+    _ServicePattern('YouTube Premium', ['youtube.com', 'google.com'], ['youtube premium', 'youtube music'], 'Entertainment', '₹149/mo'),
+    _ServicePattern('Apple TV+', ['apple.com'], ['apple tv'], 'Entertainment', '₹99/mo'),
+    _ServicePattern('JioCinema', ['jiocinema.com', 'jio.com'], ['jiocinema'], 'Entertainment', '₹29/mo'),
+    _ServicePattern('SonyLIV', ['sonyliv.com'], ['sonyliv'], 'Entertainment', '₹299/mo'),
+    _ServicePattern('ZEE5', ['zee5.com'], ['zee5'], 'Entertainment', '₹99/mo'),
+    _ServicePattern('Crunchyroll', ['crunchyroll.com'], ['crunchyroll'], 'Entertainment', '\$7.99/mo'),
+    _ServicePattern('HBO Max', ['hbo.com', 'hbomax.com', 'max.com'], ['hbo max', 'hbo'], 'Entertainment', '\$15.99/mo'),
+    _ServicePattern('Xbox Game Pass', ['xbox.com', 'microsoft.com'], ['xbox game pass', 'game pass'], 'Entertainment', '₹499/mo'),
+    _ServicePattern('PlayStation Plus', ['playstation.com', 'sony.com'], ['playstation plus', 'ps plus'], 'Entertainment', '₹3,499/yr'),
+    _ServicePattern('Nintendo Online', ['nintendo.com'], ['nintendo switch online'], 'Entertainment', '₹1,749/yr'),
 
     // Music
-    _ServicePattern('Apple Music', ['apple music'], 'Music', '₹99/mo'),
-    _ServicePattern('Gaana', ['gaana'], 'Music', '₹99/mo'),
-    _ServicePattern('JioSaavn', ['jiosaavn', 'saavn'], 'Music', '₹99/mo'),
-    _ServicePattern('Wynk Music', ['wynk'], 'Music', '₹49/mo'),
+    _ServicePattern('Apple Music', ['apple.com'], ['apple music'], 'Music', '₹99/mo'),
+    _ServicePattern('Gaana', ['gaana.com'], ['gaana'], 'Music', '₹99/mo'),
+    _ServicePattern('JioSaavn', ['jiosaavn.com'], ['jiosaavn', 'saavn'], 'Music', '₹99/mo'),
+    _ServicePattern('Wynk Music', ['wynk.in'], ['wynk'], 'Music', '₹49/mo'),
 
     // Productivity
-    _ServicePattern('Microsoft 365', ['microsoft 365', 'office 365', 'microsoft subscription'], 'Productivity', '₹489/mo'),
-    _ServicePattern('Google One', ['google one', 'google storage'], 'Productivity', '₹130/mo'),
-    _ServicePattern('Notion', ['notion'], 'Productivity', '\$10/mo'),
-    _ServicePattern('Slack', ['slack'], 'Productivity', '\$8.75/mo'),
-    _ServicePattern('Zoom', ['zoom'], 'Productivity', '₹1,100/mo'),
-    _ServicePattern('Canva Pro', ['canva'], 'Productivity', '₹500/mo'),
-    _ServicePattern('ChatGPT Plus', ['chatgpt', 'openai'], 'Productivity', '\$20/mo'),
-    _ServicePattern('GitHub', ['github'], 'Productivity', '\$4/mo'),
+    _ServicePattern('Microsoft 365', ['microsoft.com'], ['microsoft 365', 'office 365', 'microsoft subscription'], 'Productivity', '₹489/mo'),
+    _ServicePattern('Google One', ['google.com'], ['google one', 'google storage'], 'Productivity', '₹130/mo'),
+    _ServicePattern('Notion', ['notion.so', 'notion.com'], ['notion'], 'Productivity', '\$10/mo'),
+    _ServicePattern('Slack', ['slack.com'], ['slack'], 'Productivity', '\$8.75/mo'),
+    _ServicePattern('Zoom', ['zoom.us', 'zoom.com'], ['zoom'], 'Productivity', '₹1,100/mo'),
+    _ServicePattern('Canva Pro', ['canva.com'], ['canva'], 'Productivity', '₹500/mo'),
+    _ServicePattern('ChatGPT Plus', ['openai.com'], ['chatgpt', 'openai'], 'Productivity', '\$20/mo'),
+    _ServicePattern('GitHub', ['github.com'], ['github'], 'Productivity', '\$4/mo'),
 
     // Cloud
-    _ServicePattern('Adobe Creative Cloud', ['adobe', 'creative cloud'], 'Cloud', '₹1,675/mo'),
-    _ServicePattern('Dropbox', ['dropbox'], 'Cloud', '₹790/mo'),
-    _ServicePattern('iCloud', ['icloud'], 'Cloud', '₹75/mo'),
-    _ServicePattern('AWS', ['amazon web services', 'aws'], 'Cloud', ''),
+    _ServicePattern('Adobe Creative Cloud', ['adobe.com'], ['adobe', 'creative cloud'], 'Cloud', '₹1,675/mo'),
+    _ServicePattern('Dropbox', ['dropbox.com'], ['dropbox'], 'Cloud', '₹790/mo'),
+    _ServicePattern('iCloud', ['apple.com'], ['icloud'], 'Cloud', '₹75/mo'),
+    _ServicePattern('AWS', ['amazon.com', 'aws.amazon.com', 'amazon.in'], ['amazon web services', 'aws'], 'Cloud', ''),
 
     // Other
-    _ServicePattern('Swiggy One', ['swiggy one', 'swiggy super'], 'Other', '₹299/3mo'),
-    _ServicePattern('Zomato Gold', ['zomato gold', 'zomato pro'], 'Other', '₹300/3mo'),
-    _ServicePattern('LinkedIn Premium', ['linkedin premium'], 'Other', '₹1,555/mo'),
-    _ServicePattern('Medium', ['medium membership', 'medium subscription'], 'Other', '\$5/mo'),
-    _ServicePattern('Audible', ['audible'], 'Other', '₹199/mo'),
-    _ServicePattern('Kindle Unlimited', ['kindle unlimited'], 'Other', '₹169/mo'),
+    _ServicePattern('Swiggy One', ['swiggy.in', 'swiggy.com'], ['swiggy one', 'swiggy super'], 'Other', '₹299/3mo'),
+    _ServicePattern('Zomato Gold', ['zomato.com'], ['zomato gold', 'zomato pro'], 'Other', '₹300/3mo'),
+    _ServicePattern('LinkedIn Premium', ['linkedin.com'], ['linkedin premium'], 'Other', '₹1,555/mo'),
+    _ServicePattern('Medium', ['medium.com'], ['medium membership', 'medium subscription'], 'Other', '\$5/mo'),
+    _ServicePattern('Audible', ['audible.com', 'audible.in', 'amazon.in', 'amazon.com'], ['audible'], 'Other', '₹199/mo'),
+    _ServicePattern('Kindle Unlimited', ['amazon.com', 'amazon.in'], ['kindle unlimited'], 'Other', '₹169/mo'),
   ];
 
-  // ─── Price patterns (₹, $, Rs, INR, USD) ───
+  // ─── Price patterns (₹, $, Rs, INR, USD) with optional billing cycle ───
   static final RegExp _priceRegex = RegExp(
-    r'(?:₹|Rs\.?\s*|INR\s*|USD\s*|\$)\s*[\d,]+(?:\.\d{1,2})?'
-    r'|[\d,]+(?:\.\d{1,2})?\s*(?:₹|Rs\.?|INR|USD|\$)',
+    r'(?:₹|Rs\.?\s*|INR\s*|USD\s*|\$)\s*[\d,]+(?:\.\d{1,2})?\s*(?:\/mo|\/month|\/yr|\/year|/yr|/mo)?'
+    r'|[\d,]+(?:\.\d{1,2})?\s*(?:₹|Rs\.?|INR|USD|\$)\s*(?:\/mo|\/month|\/yr|\/year)?',
     caseSensitive: false,
   );
 
@@ -150,11 +150,13 @@ class GmailService {
       final payloadHeaders = (msgData['payload']?['headers'] as List<dynamic>?) ?? [];
       String subject = '';
       String date = '';
+      String sender = '';
 
       for (final header in payloadHeaders) {
         final name = header['name'] as String? ?? '';
         if (name == 'Subject') subject = header['value'] ?? '';
         if (name == 'Date') date = header['value'] ?? '';
+        if (name == 'From') sender = header['value'] ?? '';
       }
 
       final snippet = msgData['snippet'] as String? ?? '';
@@ -166,23 +168,29 @@ class GmailService {
 
       // Match against known services
       for (final pattern in _servicePatterns) {
-        if (pattern.matches(searchText) && !detectedMap.containsKey(pattern.name)) {
-          // Try to extract price from subject, snippet, then body
-          String price = _extractPrice(subject);
+        if (pattern.matches(sender, searchText)) {
+          // Try to extract price smartly using context around money values
+          String price = _extractPrice(bodyText);
           if (price.isEmpty) price = _extractPrice(snippet);
-          if (price.isEmpty) price = _extractPrice(bodyText);
+          if (price.isEmpty) price = _extractPrice(subject);
           // Fall back to known default price
           if (price.isEmpty) price = pattern.defaultPrice;
 
           final parsedDate = _parseEmailDate(date);
 
-          detectedMap[pattern.name] = DetectedSubscription(
-            name: pattern.name,
-            price: price,
-            category: pattern.category,
-            date: parsedDate,
-            emailSubject: subject,
-          );
+          // If already exists, keep the one with more complete data (price + date)
+          final existing = detectedMap[pattern.name];
+          if (existing == null || 
+              (price.isNotEmpty && existing.price.isEmpty) ||
+              (parsedDate.isNotEmpty && existing.date.isEmpty)) {
+            detectedMap[pattern.name] = DetectedSubscription(
+              name: pattern.name,
+              price: price,
+              category: pattern.category,
+              date: parsedDate,
+              emailSubject: subject,
+            );
+          }
           break;
         }
       }
@@ -203,7 +211,7 @@ class GmailService {
     if (body != null && body['data'] != null) {
       try {
         final decoded = utf8.decode(base64Url.decode(body['data'] as String));
-        // Strip HTML tags for cleaner text
+        // Strip HTML tags replacing them with spaces to prevent words running together
         return decoded.replaceAll(RegExp(r'<[^>]*>'), ' ').replaceAll(RegExp(r'\s+'), ' ');
       } catch (_) {}
     }
@@ -219,8 +227,8 @@ class GmailService {
             try {
               final decoded = utf8.decode(base64Url.decode(partBody['data'] as String));
               final text = decoded.replaceAll(RegExp(r'<[^>]*>'), ' ').replaceAll(RegExp(r'\s+'), ' ');
-              // Only return first 2000 chars to keep it efficient
-              return text.length > 2000 ? text.substring(0, 2000) : text;
+              // Return slightly more chars to find prices later in long emails
+              return text.length > 5000 ? text.substring(0, 5000) : text;
             } catch (_) {}
           }
         }
@@ -235,9 +243,24 @@ class GmailService {
     return '';
   }
 
-  /// Extract price from text.
+  /// Extract price from text smartly.
   String _extractPrice(String text) {
     if (text.isEmpty) return '';
+
+    // Step 1: Look for price near context keywords to avoid matching random unrelated numbers.
+    // E.g., 'Total Amount: $10.00' or 'You paid ₹499'
+    final contextPattern = RegExp(
+      r'(?:\b(?:total|amount|paid|charged|price|receipt|order|sum|payment|billed|due)\b)[^0-9₹$A-Z]{0,20}'
+      r'((?:₹|Rs\.?\s*|INR\s*|USD\s*|\$)\s*[\d,]+(?:\.\d{1,2})?|[\d,]+(?:\.\d{1,2})?\s*(?:₹|Rs\.?|INR|USD|\$))',
+      caseSensitive: false,
+    );
+
+    final contextMatch = contextPattern.firstMatch(text);
+    if (contextMatch != null && contextMatch.groupCount >= 1) {
+      return contextMatch.group(1)!.trim();
+    }
+
+    // Step 2: Fallback to the first occurrence of a currency string (risky, but sometimes necessary)
     final match = _priceRegex.firstMatch(text);
     if (match != null) {
       return match.group(0)!.trim();
@@ -280,13 +303,52 @@ class GmailService {
 
 class _ServicePattern {
   final String name;
+  final List<String> domains;
   final List<String> keywords;
   final String category;
   final String defaultPrice;
 
-  const _ServicePattern(this.name, this.keywords, this.category, this.defaultPrice);
+  const _ServicePattern(this.name, this.domains, this.keywords, this.category, this.defaultPrice);
 
-  bool matches(String text) {
-    return keywords.any((kw) => text.contains(kw));
+  bool matches(String sender, String text) {
+    final senderLower = sender.toLowerCase();
+    final textLower = text.toLowerCase();
+    
+    // STRICT: Check if the email originated from the verified service domains
+    if (domains.isNotEmpty && domains.any((d) => senderLower.contains(d))) {
+      // For domain matches, still verify it's not promotional
+      // Check for subscription/renewal/billing keywords to confirm it's a transaction email
+      final transactionKeywords = RegExp(
+        r'(?:subscription|renewal|billing|payment|invoice|receipt|membership|charged|amount|due|plan|auto-renew)',
+        caseSensitive: false,
+      );
+      if (transactionKeywords.hasMatch(textLower)) {
+        return true;
+      }
+      // Allow if sender domain matches exactly (e.g., from:netflix.com)
+      final emailPattern = RegExp(r'<([^>]+@' + domains.join('|') + r')>');
+      if (emailPattern.hasMatch(senderLower) || senderLower.contains('@${domains.first}')) {
+        return true;
+      }
+    }
+    
+    // STRICT fallback: Only match keywords with strong receipt indicators
+    // This prevents matching promotional emails about "Netflix sale" or "Spotify discount"
+    if (keywords.isNotEmpty) {
+      final keywordMatch = keywords.any((kw) => textLower.contains(kw));
+      if (keywordMatch) {
+        // Must have BOTH a keyword match AND strong receipt indicator
+        final receiptRegex = RegExp(
+          r'(?:receipt|invoice|order confirmation|subscription confirmation|'
+          r'membership confirmation|payment confirmation|charged|amount due|'
+          r'auto-renewal|renewal notice|billing|renewed)',
+          caseSensitive: false,
+        );
+        if (receiptRegex.hasMatch(textLower)) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 }

@@ -5,6 +5,7 @@ import '../models/models.dart';
 import '../widgets/stat_card.dart';
 import '../services/firestore_service.dart';
 import 'gmail_import_screen.dart';
+import '../services/payment_service.dart';
 
 class SubscriptionsScreen extends StatefulWidget {
   const SubscriptionsScreen({super.key});
@@ -19,6 +20,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   void _showAddDialog() {
     final nameCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
+    final upiIdCtrl = TextEditingController();
     String selectedCategory = 'Entertainment';
     DateTime? billingDate;
 
@@ -31,6 +33,8 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           credTextField(nameCtrl, 'Name', 'e.g. Netflix'),
           const SizedBox(height: 14),
           credTextField(priceCtrl, 'Price', 'e.g. ₹499/mo'),
+          const SizedBox(height: 14),
+          credTextField(upiIdCtrl, 'UPI ID (Optional)', 'e.g. merchant@upi'),
           const SizedBox(height: 14),
           _buildDateField(
             ctx: ctx,
@@ -57,6 +61,7 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                         : '',
                     category: selectedCategory,
                     isActive: true,
+                    upiId: upiIdCtrl.text.trim().isEmpty ? null : upiIdCtrl.text.trim(),
                   ),
                 );
                 if (ctx.mounted) Navigator.pop(ctx);
@@ -339,61 +344,101 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                       },
                       child: GlassCard(
                         padding: const EdgeInsets.all(20),
-                        child: Row(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Container(
-                              width: 10,
-                              height: 10,
-                              decoration: BoxDecoration(
-                                color: color,
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    sub.name,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 16,
-                                      color: cs.onSurface,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '${sub.category} · ${sub.nextBilling}',
-                                    style: TextStyle(
-                                      color: cs.onSurfaceVariant
-                                          .withValues(alpha: 0.6),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
+                            Row(
                               children: [
-                                Text(
-                                  sub.price,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 16,
-                                    color: cs.onSurface,
+                                Container(
+                                  width: 10,
+                                  height: 10,
+                                  decoration: BoxDecoration(
+                                    color: color,
+                                    shape: BoxShape.circle,
                                   ),
                                 ),
-                                const SizedBox(height: 4),
-                                StatusBadge(
-                                  text: sub.isActive ? 'Active' : 'Paused',
-                                  color: sub.isActive
-                                      ? AppTheme.success
-                                      : cs.onSurfaceVariant,
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        sub.name,
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 16,
+                                          color: cs.onSurface,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '${sub.category} · ${sub.nextBilling}',
+                                        style: TextStyle(
+                                          color: cs.onSurfaceVariant
+                                              .withValues(alpha: 0.6),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      sub.price,
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 16,
+                                        color: cs.onSurface,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    StatusBadge(
+                                      text: sub.isActive ? 'Active' : 'Paused',
+                                      color: sub.isActive
+                                          ? AppTheme.success
+                                          : cs.onSurfaceVariant,
+                                    ),
+                                  ],
                                 ),
                               ],
                             ),
+                            if (sub.isActive && sub.upiId != null)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 16),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: () async {
+                                      final result = await PaymentService.launchUPI(
+                                        upiId: sub.upiId!,
+                                        payeeName: sub.name,
+                                        amount: sub.price,
+                                        transactionNote: 'Subscription: ${sub.name}',
+                                      );
+                                      if (!result.success && context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          SnackBar(
+                                            content: Text(result.error ?? 'Payment failed'),
+                                            backgroundColor: AppTheme.danger,
+                                          ),
+                                        );
+                                      }
+                                    },
+                                    icon: const Icon(Icons.payment, size: 16),
+                                    label: const Text('Pay via UPI'),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: AppTheme.success,
+                                      side: const BorderSide(color: AppTheme.success, width: 1.5),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                              ),
                           ],
                         ),
                       ),
