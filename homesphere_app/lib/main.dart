@@ -510,11 +510,15 @@ class _MainNavigationState extends State<MainNavigation> {
     return Builder(
       builder: (context) {
         final cs = Theme.of(context).colorScheme;
+        final user = FirebaseAuth.instance.currentUser;
         return GestureDetector(
           onTap: () => Navigator.push(
             context,
             MaterialPageRoute(builder: (_) => const SettingsScreen()),
-          ),
+          ).then((_) {
+            _cachedInitials = null;
+            setState(() {});
+          }),
           child: Container(
             padding: const EdgeInsets.all(3),
             decoration: BoxDecoration(
@@ -531,14 +535,19 @@ class _MainNavigationState extends State<MainNavigation> {
             child: CircleAvatar(
               radius: 17,
               backgroundColor: cs.surface,
-              child: Text(
-                _getUserInitials(),
-                style: TextStyle(
-                  color: cs.primary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              backgroundImage: user?.photoURL != null
+                  ? NetworkImage(user!.photoURL!)
+                  : null,
+              child: user?.photoURL == null
+                  ? Text(
+                      _getUserInitials(),
+                      style: TextStyle(
+                        color: cs.primary,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    )
+                  : null,
             ),
           ),
         );

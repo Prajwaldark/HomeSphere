@@ -1,5 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../theme/app_theme.dart';
 import '../services/notification_service.dart';
 import '../services/auth_service.dart';
@@ -54,48 +57,142 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return '?';
   }
 
-  void _showEditNameDialog() {
+  void _showEditProfileDialog() {
     final nameCtrl = TextEditingController(text: _user?.displayName ?? '');
+    File? selectedImage;
+    bool isUploading = false;
+
     CREDBottomSheet.show(
       context: context,
       title: 'Edit Profile',
-      builder: (ctx, setModalState) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          credTextField(nameCtrl, 'Display Name', 'Enter your name'),
-          const SizedBox(height: 24),
-          credButton(
-            label: 'Save',
-            onPressed: () async {
-              final newName = nameCtrl.text.trim();
-              if (newName.isEmpty) return;
-              try {
-                await _user?.updateDisplayName(newName);
-                await _user?.reload();
-                if (ctx.mounted) Navigator.pop(ctx);
-                setState(() {});
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: const Text('Name updated successfully'),
-                      backgroundColor: AppTheme.success,
-                    ),
-                  );
+      builder: (ctx, setModalState) {
+        final cs = Theme.of(ctx).colorScheme;
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            GestureDetector(
+              onTap: () async {
+                final picker = ImagePicker();
+                final picked =
+                    await picker.pickImage(source: ImageSource.gallery);
+                if (picked != null) {
+                  setModalState(() => selectedImage = File(picked.path));
                 }
-              } catch (e) {
-                if (ctx.mounted) {
-                  ScaffoldMessenger.of(ctx).showSnackBar(
-                    SnackBar(
-                      content: Text('Error: $e'),
-                      backgroundColor: AppTheme.danger,
+              },
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Container(
+                    width: 90,
+                    height: 90,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: cs.surfaceContainerHigh,
+                      border: Border.all(
+                        color: cs.primary.withValues(alpha: 0.3),
+                        width: 2,
+                      ),
+                      image: selectedImage != null
+                          ? DecorationImage(
+                              image: FileImage(selectedImage!),
+                              fit: BoxFit.cover,
+                            )
+                          : (_user?.photoURL != null
+                              ? DecorationImage(
+                                  image: NetworkImage(_user!.photoURL!),
+                                  fit: BoxFit.cover,
+                                )
+                              : null),
                     ),
-                  );
-                }
-              }
-            },
-          ),
-        ],
-      ),
+                    child: selectedImage == null && _user?.photoURL == null
+                        ? Icon(
+                            Icons.person_outline_rounded,
+                            size: 40,
+                            color: cs.primary,
+                          )
+                        : null,
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(6),
+                      decoration: BoxDecoration(
+                        color: cs.primary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: cs.surface, width: 2),
+                      ),
+                      child: Icon(
+                        Icons.camera_alt_rounded,
+                        size: 14,
+                        color: cs.onPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            credTextField(nameCtrl, 'Display Name', 'Enter your name'),
+            const SizedBox(height: 24),
+            isUploading
+                ? Center(
+                    child: CircularProgressIndicator(color: cs.primary),
+                  )
+                : credButton(
+                    label: 'Save',
+                    onPressed: () async {
+                      final newName = nameCtrl.text.trim();
+                      if (newName.isEmpty) return;
+
+                      setModalState(() => isUploading = true);
+
+                      try {
+                        // Upload image if selected
+                        if (selectedImage != null) {
+                          final storageRef = FirebaseStorage.instance
+                              .ref()
+                              .child('profiles')
+                              .child('${_user?.uid}.jpg');
+                          await storageRef.putFile(selectedImage!);
+                          final downloadUrl =
+                              await storageRef.getDownloadURL();
+                          await _user?.updatePhotoURL(downloadUrl);
+                        }
+
+                        // Update name
+                        if (_user?.displayName != newName) {
+                          await _user?.updateDisplayName(newName);
+                        }
+
+                        await _user?.reload();
+                        if (ctx.mounted) Navigator.pop(ctx);
+                        setState(() {});
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content:
+                                  const Text('Profile updated successfully'),
+                              backgroundColor: AppTheme.success,
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        setModalState(() => isUploading = false);
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            SnackBar(
+                              content: Text('Error updating profile: $e'),
+                              backgroundColor: AppTheme.danger,
+                            ),
+                          );
+                        }
+                      }
+                    },
+                  ),
+          ],
+        );
+      },
     );
   }
 
@@ -439,14 +536,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     child: CircleAvatar(
                       radius: 40,
                       backgroundColor: cs.surfaceContainerHigh,
-                      child: Text(
-                        _getInitials(),
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontSize: 28,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
+                      backgroundImage: _user?.photoURL != null
+                          ? NetworkImage(_user!.photoURL!)
+                          : null,
+                      child: _user?.photoURL == null
+                          ? Text(
+                              _getInitials(),
+                              style: TextStyle(
+                                color: cs.primary,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            )
+                          : null,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -496,9 +598,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: OutlinedButton.icon(
-                      onPressed: _showEditNameDialog,
+                      onPressed: _showEditProfileDialog,
                       icon: const Icon(Icons.edit_rounded, size: 16),
-                      label: const Text('Edit Name'),
+                      label: const Text('Edit Profile'),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: cs.primary,
                         side: BorderSide(
