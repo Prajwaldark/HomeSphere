@@ -192,6 +192,95 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
     );
   }
 
+  void _showEditDialog(Vehicle vehicle) {
+    _showVehicleFormEdit(vehicle);
+  }
+
+  Future<void> _showVehicleFormEdit(Vehicle vehicle) async {
+    final nameCtrl = TextEditingController(text: vehicle.name);
+    final regCtrl = TextEditingController(text: vehicle.regNumber);
+    final serviceCtrl = TextEditingController(text: vehicle.nextService);
+    DateTime? insuranceDate = vehicle.insuranceExpiry.isNotEmpty
+        ? DateFormat('MMM dd, yyyy').tryParse(vehicle.insuranceExpiry)
+        : null;
+    DateTime? pucDate = vehicle.pucExpiry.isNotEmpty
+        ? DateFormat('MMM dd, yyyy').tryParse(vehicle.pucExpiry)
+        : null;
+
+    await CREDBottomSheet.show(
+      context: context,
+      title: 'Edit Vehicle',
+      builder: (ctx, setModalState) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              credTextField(nameCtrl, 'Vehicle Name', 'e.g. Honda City'),
+              const SizedBox(height: 14),
+              credTextField(regCtrl, 'Registration No.', 'e.g. KA-09-AB-1234'),
+              const SizedBox(height: 14),
+              _buildDateField(
+                ctx: ctx,
+                label: 'Insurance Expiry',
+                date: insuranceDate,
+                onPicked: (d) => setModalState(() => insuranceDate = d),
+              ),
+              const SizedBox(height: 14),
+              _buildDateField(
+                ctx: ctx,
+                label: 'PUC Expiry',
+                date: pucDate,
+                onPicked: (d) => setModalState(() => pucDate = d),
+              ),
+              const SizedBox(height: 14),
+              credTextField(
+                serviceCtrl,
+                'Next Service (km)',
+                'e.g. 15000',
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 24),
+              credButton(
+                label: 'Save Changes',
+                onPressed: () async {
+                  if (nameCtrl.text.isEmpty) return;
+                  try {
+                    await _firestoreService.updateVehicle(
+                      Vehicle(
+                        id: vehicle.id,
+                        name: nameCtrl.text.trim(),
+                        regNumber: regCtrl.text.trim(),
+                        mileage: vehicle.mileage,
+                        insuranceExpiry: insuranceDate != null
+                            ? DateFormat('MMM dd, yyyy').format(insuranceDate!)
+                            : '',
+                        pucExpiry: pucDate != null
+                            ? DateFormat('MMM dd, yyyy').format(pucDate!)
+                            : '',
+                        nextService: serviceCtrl.text.trim(),
+                      ),
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  } catch (e) {
+                    if (ctx.mounted) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        SnackBar(
+                          content: Text('Error: $e'),
+                          backgroundColor: AppTheme.danger,
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _scanVehicleFromCamera() async {
     final image = await _imagePicker.pickImage(
       source: ImageSource.camera,
@@ -381,8 +470,22 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Dismissible(
                       key: Key(vehicle.id ?? vehicle.name),
-                      direction: DismissDirection.endToStart,
+                      direction: DismissDirection.horizontal,
+                      // Left: edit (blue)
                       background: Container(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 24),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      // Right: delete (red)
+                      secondaryBackground: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 24),
                         decoration: BoxDecoration(
@@ -394,6 +497,13 @@ class _VehiclesScreenState extends State<VehiclesScreen> {
                           color: AppTheme.danger,
                         ),
                       ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          _showEditDialog(vehicle);
+                          return false;
+                        }
+                        return true;
+                      },
                       onDismissed: (_) {
                         if (vehicle.id != null) {
                           _firestoreService.deleteVehicle(vehicle.id!);

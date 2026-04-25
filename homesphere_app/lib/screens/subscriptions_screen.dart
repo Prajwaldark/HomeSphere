@@ -18,15 +18,26 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
   final _firestoreService = FirestoreService();
 
   void _showAddDialog() {
-    final nameCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
-    final upiIdCtrl = TextEditingController();
-    String selectedCategory = 'Entertainment';
-    DateTime? billingDate;
+    _showSubscriptionForm();
+  }
+
+  void _showEditDialog(Subscription sub) {
+    _showSubscriptionForm(existing: sub);
+  }
+
+  void _showSubscriptionForm({Subscription? existing}) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final priceCtrl = TextEditingController(text: existing?.price ?? '');
+    final upiIdCtrl = TextEditingController(text: existing?.upiId ?? '');
+    String selectedCategory = existing?.category ?? 'Entertainment';
+    DateTime? billingDate = existing != null && existing.nextBilling.isNotEmpty
+        ? DateFormat('MMM dd, yyyy').tryParse(existing.nextBilling)
+        : null;
+    final isEdit = existing != null;
 
     CREDBottomSheet.show(
       context: context,
-      title: 'Add Subscription',
+      title: isEdit ? 'Edit Subscription' : 'Add Subscription',
       builder: (ctx, setModalState) => Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -48,22 +59,28 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
           }),
           const SizedBox(height: 24),
           credButton(
-            label: 'Add Subscription',
+            label: isEdit ? 'Save Changes' : 'Add Subscription',
             onPressed: () async {
               if (nameCtrl.text.isEmpty) return;
               try {
-                await _firestoreService.addSubscription(
-                  Subscription(
-                    name: nameCtrl.text.trim(),
-                    price: priceCtrl.text.trim(),
-                    nextBilling: billingDate != null
-                        ? DateFormat('MMM dd, yyyy').format(billingDate!)
-                        : '',
-                    category: selectedCategory,
-                    isActive: true,
-                    upiId: upiIdCtrl.text.trim().isEmpty ? null : upiIdCtrl.text.trim(),
-                  ),
+                final updated = Subscription(
+                  id: existing?.id,
+                  name: nameCtrl.text.trim(),
+                  price: priceCtrl.text.trim(),
+                  nextBilling: billingDate != null
+                      ? DateFormat('MMM dd, yyyy').format(billingDate!)
+                      : '',
+                  category: selectedCategory,
+                  isActive: existing?.isActive ?? true,
+                  upiId: upiIdCtrl.text.trim().isEmpty
+                      ? null
+                      : upiIdCtrl.text.trim(),
                 );
+                if (isEdit) {
+                  await _firestoreService.updateSubscription(updated);
+                } else {
+                  await _firestoreService.addSubscription(updated);
+                }
                 if (ctx.mounted) Navigator.pop(ctx);
               } catch (e) {
                 if (ctx.mounted) {
@@ -324,8 +341,22 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Dismissible(
                       key: Key(sub.id ?? sub.name),
-                      direction: DismissDirection.endToStart,
+                      direction: DismissDirection.horizontal,
+                      // Left side: edit (blue)
                       background: Container(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 24),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          color: cs.primary,
+                        ),
+                      ),
+                      // Right side: delete (red)
+                      secondaryBackground: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 24),
                         decoration: BoxDecoration(
@@ -337,6 +368,13 @@ class _SubscriptionsScreenState extends State<SubscriptionsScreen> {
                           color: AppTheme.danger,
                         ),
                       ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          _showEditDialog(sub);
+                          return false; // don't dismiss, just open edit
+                        }
+                        return true; // allow delete
+                      },
                       onDismissed: (_) {
                         if (sub.id != null) {
                           _firestoreService.deleteSubscription(sub.id!);

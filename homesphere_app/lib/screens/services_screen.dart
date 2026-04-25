@@ -40,17 +40,38 @@ class _ServicesScreenState extends State<ServicesScreen> {
   }
 
   void _showAddDialog() {
-    final nameCtrl = TextEditingController();
-    final phoneCtrl = TextEditingController();
-    final locationCtrl = TextEditingController();
-    final ratingCtrl = TextEditingController(text: '4.5');
-    String category = 'Electrician';
+    _showProviderForm();
+  }
+
+  void _showEditProviderDialog(ServiceProvider provider) {
+    _showProviderForm(existing: provider);
+  }
+
+  void _showProviderForm({ServiceProvider? existing}) {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final phoneCtrl = TextEditingController(text: existing?.phone ?? '');
+    final locationCtrl = TextEditingController(text: existing?.location ?? '');
+    final ratingCtrl = TextEditingController(
+      text: existing != null ? '${existing.rating}' : '4.5',
+    );
+    final customCategoryCtrl = TextEditingController();
+    // If the existing category is not in the preset list, show as custom
+    final presetCategories = ['Electrician', 'Plumber', 'Mechanic', 'AC Technician', 'Other'];
+    String category = existing != null && presetCategories.contains(existing.category)
+        ? existing.category
+        : (existing != null ? 'Other' : 'Electrician');
+    // Pre-fill custom category if needed
+    if (existing != null && !presetCategories.sublist(0, 4).contains(existing.category)) {
+      customCategoryCtrl.text = existing.category;
+    }
+    final isEdit = existing != null;
 
     CREDBottomSheet.show(
       context: context,
-      title: 'Add Provider',
+      title: isEdit ? 'Edit Provider' : 'Add Provider',
       builder: (ctx, setModalState) {
         final cs = Theme.of(ctx).colorScheme;
+        final isOther = category == 'Other';
         return SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -69,7 +90,7 @@ class _ServicesScreenState extends State<ServicesScreen> {
               ),
               const SizedBox(height: 14),
               DropdownButtonFormField<String>(
-                initialValue: category,
+                value: category,
                 dropdownColor: cs.surfaceContainerHigh,
                 style: TextStyle(color: cs.onSurface, fontSize: 15),
                 decoration: const InputDecoration(labelText: 'Category'),
@@ -85,21 +106,69 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     .toList(),
                 onChanged: (v) => setModalState(() => category = v!),
               ),
+              // Show custom category field when "Other" is selected
+              AnimatedSize(
+                duration: const Duration(milliseconds: 260),
+                curve: Curves.easeInOut,
+                child: isOther
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.label_outline_rounded,
+                                  size: 16,
+                                  color: cs.primary,
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'New Category Name',
+                                  style: TextStyle(
+                                    color: cs.primary,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            credTextField(
+                              customCategoryCtrl,
+                              'Category Name',
+                              'e.g. Carpenter, Painter...',
+                            ),
+                          ],
+                        ),
+                      )
+                    : const SizedBox.shrink(),
+              ),
               const SizedBox(height: 24),
               credButton(
-                label: 'Add Provider',
+                label: isEdit ? 'Save Changes' : 'Add Provider',
                 onPressed: () async {
                   if (nameCtrl.text.isEmpty) return;
+                  // Use custom category name if "Other" was selected
+                  final finalCategory = (category == 'Other' &&
+                          customCategoryCtrl.text.trim().isNotEmpty)
+                      ? customCategoryCtrl.text.trim()
+                      : category;
                   try {
-                    await _firestoreService.addServiceProvider(
-                      ServiceProvider(
-                        name: nameCtrl.text.trim(),
-                        category: category,
-                        rating: double.tryParse(ratingCtrl.text) ?? 4.5,
-                        phone: phoneCtrl.text.trim(),
-                        location: locationCtrl.text.trim(),
-                      ),
+                    final updated = ServiceProvider(
+                      id: existing?.id,
+                      name: nameCtrl.text.trim(),
+                      category: finalCategory,
+                      rating: double.tryParse(ratingCtrl.text) ?? 4.5,
+                      phone: phoneCtrl.text.trim(),
+                      location: locationCtrl.text.trim(),
                     );
+                    if (isEdit) {
+                      await _firestoreService.updateServiceProvider(updated);
+                    } else {
+                      await _firestoreService.addServiceProvider(updated);
+                    }
                     if (ctx.mounted) Navigator.pop(ctx);
                   } catch (e) {
                     if (ctx.mounted) {
@@ -544,8 +613,22 @@ class _ServicesScreenState extends State<ServicesScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Dismissible(
                       key: Key(provider.id ?? provider.name),
-                      direction: DismissDirection.endToStart,
+                      direction: DismissDirection.horizontal,
+                      // Left: edit (blue)
                       background: Container(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 24),
+                        decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          color: cs.primary,
+                        ),
+                      ),
+                      // Right: delete (red)
+                      secondaryBackground: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 24),
                         decoration: BoxDecoration(
@@ -557,6 +640,13 @@ class _ServicesScreenState extends State<ServicesScreen> {
                           color: AppTheme.danger,
                         ),
                       ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          _showEditProviderDialog(provider);
+                          return false;
+                        }
+                        return true;
+                      },
                       onDismissed: (_) {
                         if (provider.id != null) {
                           _firestoreService.deleteServiceProvider(provider.id!);

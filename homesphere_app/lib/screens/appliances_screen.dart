@@ -226,6 +226,122 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
     );
   }
 
+  Future<void> _showEditDialog(Appliance appliance) async {
+    await _showApplianceFormEdit(appliance);
+  }
+
+  Future<void> _showApplianceFormEdit(Appliance appliance) async {
+    final nameCtrl = TextEditingController(text: appliance.name);
+    final brandCtrl = TextEditingController(text: appliance.brand);
+    final modelCtrl = TextEditingController(text: appliance.model);
+    DateTime? purchaseDate = _parseUiDate(appliance.purchaseDate);
+    DateTime? warrantyDate = _parseUiDate(appliance.warrantyExpiry);
+    String category = Appliance.categoryOptions.contains(appliance.category)
+        ? appliance.category
+        : 'Other';
+    String status = Appliance.statusOptions.contains(appliance.status)
+        ? appliance.status
+        : Appliance.statusOptions.first;
+
+    await CREDBottomSheet.show(
+      context: context,
+      title: 'Edit Appliance',
+      builder: (ctx, setModalState) {
+        final cs = Theme.of(ctx).colorScheme;
+        return SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              credTextField(nameCtrl, 'Appliance Name', 'e.g. Samsung Fridge'),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: category,
+                dropdownColor: cs.surfaceContainerHigh,
+                style: TextStyle(color: cs.onSurface, fontSize: 15),
+                decoration: const InputDecoration(labelText: 'Category'),
+                items: Appliance.categoryOptions
+                    .map((option) => DropdownMenuItem(
+                          value: option,
+                          child: Text(option),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setModalState(() => category = value);
+                },
+              ),
+              const SizedBox(height: 14),
+              credTextField(brandCtrl, 'Brand', 'e.g. Samsung'),
+              const SizedBox(height: 14),
+              credTextField(modelCtrl, 'Model', 'e.g. RT28A3453S8'),
+              const SizedBox(height: 14),
+              _buildDateField(
+                ctx: ctx,
+                label: 'Purchase Date',
+                date: purchaseDate,
+                onPicked: (date) => setModalState(() => purchaseDate = date),
+              ),
+              const SizedBox(height: 14),
+              _buildDateField(
+                ctx: ctx,
+                label: 'Warranty Expiry',
+                date: warrantyDate,
+                onPicked: (date) => setModalState(() => warrantyDate = date),
+              ),
+              const SizedBox(height: 14),
+              DropdownButtonFormField<String>(
+                value: status,
+                dropdownColor: cs.surfaceContainerHigh,
+                style: TextStyle(color: cs.onSurface, fontSize: 15),
+                decoration: const InputDecoration(labelText: 'Status'),
+                items: Appliance.statusOptions
+                    .map((option) => DropdownMenuItem(
+                          value: option,
+                          child: Text(option),
+                        ))
+                    .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setModalState(() => status = value);
+                },
+              ),
+              const SizedBox(height: 24),
+              credButton(
+                label: 'Save Changes',
+                onPressed: () async {
+                  if (nameCtrl.text.trim().isEmpty) return;
+                  try {
+                    await _firestoreService.updateAppliance(
+                      Appliance(
+                        id: appliance.id,
+                        name: nameCtrl.text.trim(),
+                        brand: brandCtrl.text.trim(),
+                        category: category,
+                        model: modelCtrl.text.trim(),
+                        purchaseDate: _formatUiDate(purchaseDate),
+                        warrantyExpiry: _formatUiDate(warrantyDate),
+                        status: status,
+                      ),
+                    );
+                    if (ctx.mounted) Navigator.pop(ctx);
+                  } catch (e) {
+                    if (!ctx.mounted) return;
+                    ScaffoldMessenger.of(ctx).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: $e'),
+                        backgroundColor: AppTheme.danger,
+                      ),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Future<void> _scanApplianceFromCamera() async {
     final image = await _imagePicker.pickImage(
       source: ImageSource.camera,
@@ -473,8 +589,22 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                     padding: const EdgeInsets.only(bottom: 10),
                     child: Dismissible(
                       key: Key(appliance.id ?? appliance.name),
-                      direction: DismissDirection.endToStart,
+                      direction: DismissDirection.horizontal,
+                      // Left: edit (blue)
                       background: Container(
+                        alignment: Alignment.centerLeft,
+                        padding: const EdgeInsets.only(left: 24),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.edit_rounded,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                      // Right: delete (red)
+                      secondaryBackground: Container(
                         alignment: Alignment.centerRight,
                         padding: const EdgeInsets.only(right: 24),
                         decoration: BoxDecoration(
@@ -486,6 +616,13 @@ class _AppliancesScreenState extends State<AppliancesScreen> {
                           color: AppTheme.danger,
                         ),
                       ),
+                      confirmDismiss: (direction) async {
+                        if (direction == DismissDirection.startToEnd) {
+                          _showEditDialog(appliance);
+                          return false;
+                        }
+                        return true;
+                      },
                       onDismissed: (_) {
                         if (appliance.id != null) {
                           _firestoreService.deleteAppliance(appliance.id!);
