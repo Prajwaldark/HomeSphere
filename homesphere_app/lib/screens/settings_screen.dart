@@ -1,4 +1,5 @@
-import 'dart:io';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
@@ -59,7 +60,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _showEditProfileDialog() {
     final nameCtrl = TextEditingController(text: _user?.displayName ?? '');
-    File? selectedImage;
+    Uint8List? selectedImageBytes;
     bool isUploading = false;
 
     CREDBottomSheet.show(
@@ -76,7 +77,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 final picked =
                     await picker.pickImage(source: ImageSource.gallery);
                 if (picked != null) {
-                  setModalState(() => selectedImage = File(picked.path));
+                  final bytes = await picked.readAsBytes();
+                  setModalState(() => selectedImageBytes = bytes);
                 }
               },
               child: Stack(
@@ -92,9 +94,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         color: cs.primary.withValues(alpha: 0.3),
                         width: 2,
                       ),
-                      image: selectedImage != null
+                      image: selectedImageBytes != null
                           ? DecorationImage(
-                              image: FileImage(selectedImage!),
+                              image: MemoryImage(selectedImageBytes!),
                               fit: BoxFit.cover,
                             )
                           : (_user?.photoURL != null
@@ -104,7 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                 )
                               : null),
                     ),
-                    child: selectedImage == null && _user?.photoURL == null
+                    child: selectedImageBytes == null && _user?.photoURL == null
                         ? Icon(
                             Icons.person_outline_rounded,
                             size: 40,
@@ -149,12 +151,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                       try {
                         // Upload image if selected
-                        if (selectedImage != null) {
+                        if (selectedImageBytes != null) {
                           final storageRef = FirebaseStorage.instance
                               .ref()
                               .child('profiles')
                               .child('${_user?.uid}.jpg');
-                          await storageRef.putFile(selectedImage!);
+                          await storageRef.putData(
+                            selectedImageBytes!,
+                            SettableMetadata(contentType: 'image/jpeg'),
+                          );
                           final downloadUrl =
                               await storageRef.getDownloadURL();
                           await _user?.updatePhotoURL(downloadUrl);
@@ -657,10 +662,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: _notificationsEnabled,
                 onChanged: (v) async {
                   setState(() => _notificationsEnabled = v);
-                  if (v) {
-                    await NotificationService().requestPermissions();
-                  } else {
-                    await NotificationService().cancelAll();
+                  if (!kIsWeb) {
+                    if (v) {
+                      await NotificationService().requestPermissions();
+                    } else {
+                      await NotificationService().cancelAll();
+                    }
                   }
                 },
               ),
